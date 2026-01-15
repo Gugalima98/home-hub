@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Map, List, ArrowLeft, MapPin, Search, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Map, List, MapPin, Search, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
@@ -36,17 +34,6 @@ const MapPlaceholder = ({
 
   return (
     <div className="h-full w-full bg-[#e5e3df] relative overflow-hidden">
-      {/* Fake map tiles */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `url("https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-46.6333,-23.5505,12,0/800x800@2x?access_token=pk.placeholder")`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: "grayscale(20%)",
-        }}
-      />
-      
       {/* Simulated map background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#e8e6e2] to-[#d9d7d3]">
         {/* Grid lines to simulate streets */}
@@ -104,18 +91,18 @@ const MapPlaceholder = ({
       </div>
       
       {/* Map controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2">
-        <button className="w-8 h-8 bg-background rounded shadow flex items-center justify-center text-foreground hover:bg-muted">
+      <div className="absolute top-4 right-4 flex flex-col gap-1">
+        <button className="w-8 h-8 bg-background rounded shadow-sm flex items-center justify-center text-foreground hover:bg-muted text-lg font-light">
           +
         </button>
-        <button className="w-8 h-8 bg-background rounded shadow flex items-center justify-center text-foreground hover:bg-muted">
+        <button className="w-8 h-8 bg-background rounded shadow-sm flex items-center justify-center text-foreground hover:bg-muted text-lg font-light">
           −
         </button>
       </div>
       
       {/* Search in area button */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-        <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-sm">
+        <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-sm h-9">
           <Search className="h-4 w-4 mr-2" />
           Buscar nesta área
         </Button>
@@ -127,7 +114,6 @@ const MapPlaceholder = ({
 const PropertiesPage = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "horizontal">("grid");
 
   const handlePropertyHover = (id: string | null) => {
     setHoveredPropertyId(id);
@@ -139,29 +125,7 @@ const PropertiesPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      {/* Search bar */}
-      <div className="border-b bg-background">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="relative flex-1 max-w-xl">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Quartos em comprar em São Paulo, SP"
-                className="pl-9 rounded-full bg-muted border-0"
-                defaultValue="Quartos em comprar em São Paulo, SP"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      
+      <Header variant="search" />
       <FilterBar />
 
       {/* Main Content */}
@@ -264,7 +228,7 @@ const PropertiesPage = () => {
 
         {/* Map */}
         <div
-          className={`w-full lg:w-[45%] lg:sticky lg:top-[10rem] lg:h-[calc(100vh-10rem)] ${
+          className={`w-full lg:w-[45%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
             showMap ? "block" : "hidden lg:block"
           }`}
         >
