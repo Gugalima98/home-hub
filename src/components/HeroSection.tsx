@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MapPin, Search, ChevronDown } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,8 +15,13 @@ import heroImage from "@/assets/hero-family.jpg";
 const HeroSection = () => {
   const [activeTab, setActiveTab] = useState<"alugar" | "comprar">("alugar");
   const [selectedRooms, setSelectedRooms] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const roomOptions = ["1+", "2+", "3+", "4+"];
+
+  const handleSearch = () => {
+    navigate("/imoveis");
+  };
 
   return (
     <section className="relative min-h-[600px] md:min-h-[700px] flex items-center">
@@ -162,7 +168,7 @@ const HeroSection = () => {
             </div>
 
             {/* Search Button */}
-            <Button className="w-full mt-4 btn-primary h-12 text-base">
+            <Button onClick={handleSearch} className="w-full mt-4 btn-primary h-12 text-base">
               Buscar imóveis
             </Button>
           </div>
