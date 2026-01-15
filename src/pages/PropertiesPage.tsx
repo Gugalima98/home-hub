@@ -1,13 +1,82 @@
 import { useState } from "react";
-import { Map, List, ArrowLeft } from "lucide-react";
+import { Map, List, ArrowLeft, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
-import PropertyMap from "@/components/PropertyMap";
 import { mockProperties } from "@/data/mock-data";
+
+// Placeholder map component - avoids Leaflet issues
+const MapPlaceholder = ({ 
+  properties, 
+  hoveredPropertyId 
+}: { 
+  properties: typeof mockProperties; 
+  hoveredPropertyId: string | null;
+}) => {
+  const formatPrice = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  return (
+    <div className="h-full w-full bg-muted relative overflow-hidden">
+      {/* Map background placeholder */}
+      <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/80">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d1d5db' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+      </div>
+      
+      {/* Property markers */}
+      <div className="absolute inset-0 p-8">
+        <div className="relative h-full w-full">
+          {properties.map((property, index) => {
+            const isHighlighted = hoveredPropertyId === property.id;
+            // Distribute markers across the placeholder
+            const top = 10 + (index % 5) * 18;
+            const left = 10 + (Math.floor(index / 5) * 45) + ((index % 3) * 10);
+            
+            return (
+              <div
+                key={property.id}
+                className={`absolute transition-all duration-200 ${
+                  isHighlighted ? "z-20 scale-110" : "z-10"
+                }`}
+                style={{ top: `${top}%`, left: `${left}%` }}
+              >
+                <div
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md cursor-pointer transition-all ${
+                    isHighlighted
+                      ? "bg-primary text-primary-foreground scale-110"
+                      : "bg-background text-foreground hover:bg-primary hover:text-primary-foreground"
+                  }`}
+                >
+                  {formatPrice(property.totalPrice)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Map info overlay */}
+      <div className="absolute bottom-4 left-4 right-4">
+        <div className="bg-background/90 backdrop-blur-sm rounded-xl p-3 shadow-lg">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span>São Paulo, SP • {properties.length} imóveis nesta área</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const PropertiesPage = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
@@ -19,12 +88,6 @@ const PropertiesPage = () => {
 
   const handlePropertyClick = (id: string) => {
     console.log("Clicked property:", id);
-    // Navigate to property detail page
-  };
-
-  const handleMarkerClick = (id: string) => {
-    console.log("Clicked marker:", id);
-    // Scroll to property in list or open detail
   };
 
   return (
@@ -99,11 +162,9 @@ const PropertiesPage = () => {
             </div>
           )}
 
-          <PropertyMap
+          <MapPlaceholder
             properties={mockProperties}
             hoveredPropertyId={hoveredPropertyId}
-            onMarkerClick={handleMarkerClick}
-            onMarkerHover={handlePropertyHover}
           />
         </div>
 
