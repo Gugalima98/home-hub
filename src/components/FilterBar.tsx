@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -9,26 +9,21 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface FilterBarProps {
-  onFiltersChange?: (filters: FilterState) => void;
+interface ActiveFilter {
+  type: string;
+  label: string;
+  color: "blue" | "pink" | "gray";
 }
 
-export interface FilterState {
-  propertyType: string[];
-  priceRange: [number, number];
-  bedrooms: number | null;
-  parkingSpots: number | null;
-  bathrooms: number | null;
-  furnished: boolean | null;
+interface FilterBarProps {
+  onFiltersChange?: (filters: any) => void;
 }
 
 const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
   const [priceRange, setPriceRange] = useState<[number, number]>([1000, 10000]);
-  const [selectedBedrooms, setSelectedBedrooms] = useState<number | null>(null);
-  const [selectedParking, setSelectedParking] = useState<number | null>(null);
-  const [selectedBathrooms, setSelectedBathrooms] = useState<number | null>(null);
-  const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
-  const [isFurnished, setIsFurnished] = useState<boolean | null>(null);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([
+    { type: "transaction", label: "Comprar", color: "blue" },
+  ]);
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -38,21 +33,51 @@ const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
     }).format(value);
   };
 
-  const bedroomOptions = [1, 2, 3, 4];
-  const parkingOptions = [0, 1, 2, 3];
-  const bathroomOptions = [1, 2, 3, 4];
+  const removeFilter = (filterToRemove: ActiveFilter) => {
+    setActiveFilters(activeFilters.filter(f => f.label !== filterToRemove.label));
+  };
+
+  const addFilter = (filter: ActiveFilter) => {
+    if (!activeFilters.find(f => f.label === filter.label)) {
+      setActiveFilters([...activeFilters, filter]);
+    }
+  };
+
+  const getFilterColor = (color: string) => {
+    switch (color) {
+      case "blue":
+        return "bg-primary text-primary-foreground";
+      case "pink":
+        return "bg-pink-100 text-pink-700 border-pink-200";
+      default:
+        return "bg-muted text-foreground border-border";
+    }
+  };
+
+  const bedroomOptions = [1, 2, 3, 4, 5];
   const propertyTypeOptions = ["Apartamento", "Casa", "Studio", "Cobertura", "Kitnet"];
 
   return (
     <div className="sticky top-16 z-40 bg-background border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
+          {/* Active Filters Pills */}
+          {activeFilters.map((filter) => (
+            <button
+              key={filter.label}
+              onClick={() => removeFilter(filter)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0 ${getFilterColor(filter.color)}`}
+            >
+              {filter.label}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ))}
+
           {/* Property Type */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-                Tipo de imóvel
-                <ChevronDown className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="rounded-full gap-1.5 shrink-0 h-8">
+                Apartamentos
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-56 bg-popover z-50" align="start">
@@ -61,12 +86,9 @@ const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
                 {propertyTypeOptions.map((type) => (
                   <label key={type} className="flex items-center gap-2 cursor-pointer">
                     <Checkbox
-                      checked={propertyTypes.includes(type)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setPropertyTypes([...propertyTypes, type]);
-                        } else {
-                          setPropertyTypes(propertyTypes.filter((t) => t !== type));
+                          addFilter({ type: "propertyType", label: type, color: "gray" });
                         }
                       }}
                     />
@@ -77,12 +99,36 @@ const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
             </PopoverContent>
           </Popover>
 
+          {/* Bedrooms */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="rounded-full gap-1.5 shrink-0 h-8">
+                Quartos
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 bg-popover z-50" align="start">
+              <div className="space-y-3">
+                <p className="font-medium text-sm">Quartos</p>
+                <div className="flex gap-2 flex-wrap">
+                  {bedroomOptions.map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => addFilter({ type: "bedrooms", label: `+${num} quartos`, color: "pink" })}
+                      className="px-4 py-2 rounded-full text-sm font-medium bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      {num}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {/* Price */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
+              <Button variant="outline" size="sm" className="rounded-full gap-1.5 shrink-0 h-8">
                 Preço
-                <ChevronDown className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 bg-popover z-50" align="start">
@@ -92,9 +138,9 @@ const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
                   <Slider
                     value={priceRange}
                     onValueChange={(value) => setPriceRange(value as [number, number])}
-                    min={500}
-                    max={20000}
-                    step={500}
+                    min={100000}
+                    max={2000000}
+                    step={50000}
                     className="w-full"
                   />
                 </div>
@@ -106,134 +152,22 @@ const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
             </PopoverContent>
           </Popover>
 
-          {/* Bedrooms */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-                Quartos
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 bg-popover z-50" align="start">
-              <div className="space-y-3">
-                <p className="font-medium text-sm">Quartos</p>
-                <div className="flex gap-2 flex-wrap">
-                  {bedroomOptions.map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setSelectedBedrooms(selectedBedrooms === num ? null : num)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                        selectedBedrooms === num
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                    >
-                      {num}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Parking */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-                Vagas
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 bg-popover z-50" align="start">
-              <div className="space-y-3">
-                <p className="font-medium text-sm">Vagas de garagem</p>
-                <div className="flex gap-2 flex-wrap">
-                  {parkingOptions.map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setSelectedParking(selectedParking === num ? null : num)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                        selectedParking === num
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                    >
-                      {num}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Bathrooms */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-                Banheiros
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 bg-popover z-50" align="start">
-              <div className="space-y-3">
-                <p className="font-medium text-sm">Banheiros</p>
-                <div className="flex gap-2 flex-wrap">
-                  {bathroomOptions.map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => setSelectedBathrooms(selectedBathrooms === num ? null : num)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                        selectedBathrooms === num
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80"
-                      }`}
-                    >
-                      {num}+
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Furnished */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-                Mobiliado
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 bg-popover z-50" align="start">
-              <div className="space-y-2">
-                <button
-                  onClick={() => setIsFurnished(isFurnished === true ? null : true)}
-                  className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-left transition-colors ${
-                    isFurnished === true
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  Mobiliado
-                </button>
-                <button
-                  onClick={() => setIsFurnished(isFurnished === false ? null : false)}
-                  className={`w-full px-4 py-2 rounded-xl text-sm font-medium text-left transition-colors ${
-                    isFurnished === false
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  Não mobiliado
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {/* Scheduling */}
+          <Button variant="outline" size="sm" className="rounded-full gap-1.5 shrink-0 h-8">
+            Agendamento
+          </Button>
 
           {/* More Filters */}
-          <Button variant="outline" className="rounded-xl gap-2 shrink-0">
-            <SlidersHorizontal className="h-4 w-4" />
-            Mais filtros
+          <Button variant="outline" size="sm" className="rounded-full gap-1.5 shrink-0 h-8">
+            + Filtros
+          </Button>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Order button */}
+          <Button variant="ghost" size="sm" className="rounded-full gap-1.5 shrink-0 h-8 text-primary">
+            Ordenar: Destaques
           </Button>
         </div>
       </div>
