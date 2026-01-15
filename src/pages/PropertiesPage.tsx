@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { Map, List, ArrowLeft, MapPin } from "lucide-react";
+import { Map, List, ArrowLeft, MapPin, Search, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
 import { mockProperties } from "@/data/mock-data";
 
-// Placeholder map component - avoids Leaflet issues
+// Neighborhoods data
+const neighborhoods = [
+  { name: "Mooca", count: "3.798", type: "apartamentos" },
+  { name: "Tatuapé", count: "3.654", type: "apartamentos" },
+  { name: "Santana", count: "3.060", type: "apartamentos" },
+  { name: "Vila Mariana", count: "3.014", type: "apartamentos" },
+  { name: "Paraíso", count: "1.974", type: "apartamentos" },
+];
+
+// Placeholder map component
 const MapPlaceholder = ({ 
   properties, 
   hoveredPropertyId 
@@ -25,54 +35,90 @@ const MapPlaceholder = ({
   };
 
   return (
-    <div className="h-full w-full bg-muted relative overflow-hidden">
-      {/* Map background placeholder */}
-      <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/80">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d1d5db' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
+    <div className="h-full w-full bg-[#e5e3df] relative overflow-hidden">
+      {/* Fake map tiles */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url("https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-46.6333,-23.5505,12,0/800x800@2x?access_token=pk.placeholder")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "grayscale(20%)",
+        }}
+      />
+      
+      {/* Simulated map background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#e8e6e2] to-[#d9d7d3]">
+        {/* Grid lines to simulate streets */}
+        <svg className="absolute inset-0 w-full h-full opacity-30">
+          <defs>
+            <pattern id="streets" width="100" height="100" patternUnits="userSpaceOnUse">
+              <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#ccc" strokeWidth="1"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#streets)" />
+        </svg>
+        
+        {/* Main roads */}
+        <div className="absolute top-1/4 left-0 right-0 h-1 bg-white/60" />
+        <div className="absolute top-1/2 left-0 right-0 h-2 bg-[#f5deb3]/60" />
+        <div className="absolute left-1/3 top-0 bottom-0 w-1 bg-white/60" />
+        <div className="absolute left-2/3 top-0 bottom-0 w-2 bg-[#f5deb3]/60" />
       </div>
       
       {/* Property markers */}
-      <div className="absolute inset-0 p-8">
-        <div className="relative h-full w-full">
-          {properties.map((property, index) => {
-            const isHighlighted = hoveredPropertyId === property.id;
-            // Distribute markers across the placeholder
-            const top = 10 + (index % 5) * 18;
-            const left = 10 + (Math.floor(index / 5) * 45) + ((index % 3) * 10);
-            
-            return (
+      <div className="absolute inset-4">
+        {properties.slice(0, 8).map((property, index) => {
+          const isHighlighted = hoveredPropertyId === property.id;
+          const positions = [
+            { top: "15%", left: "20%" },
+            { top: "25%", left: "55%" },
+            { top: "35%", left: "75%" },
+            { top: "45%", left: "30%" },
+            { top: "55%", left: "60%" },
+            { top: "65%", left: "15%" },
+            { top: "70%", left: "45%" },
+            { top: "80%", left: "70%" },
+          ];
+          
+          return (
+            <div
+              key={property.id}
+              className={`absolute transition-all duration-200 cursor-pointer ${
+                isHighlighted ? "z-20 scale-110" : "z-10"
+              }`}
+              style={positions[index]}
+            >
               <div
-                key={property.id}
-                className={`absolute transition-all duration-200 ${
-                  isHighlighted ? "z-20 scale-110" : "z-10"
+                className={`px-2 py-1 rounded-md text-xs font-bold shadow-md border transition-all ${
+                  isHighlighted
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-primary hover:text-primary-foreground hover:border-primary"
                 }`}
-                style={{ top: `${top}%`, left: `${left}%` }}
               >
-                <div
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md cursor-pointer transition-all ${
-                    isHighlighted
-                      ? "bg-primary text-primary-foreground scale-110"
-                      : "bg-background text-foreground hover:bg-primary hover:text-primary-foreground"
-                  }`}
-                >
-                  {formatPrice(property.totalPrice)}
-                </div>
+                {formatPrice(property.totalPrice)}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
       
-      {/* Map info overlay */}
-      <div className="absolute bottom-4 left-4 right-4">
-        <div className="bg-background/90 backdrop-blur-sm rounded-xl p-3 shadow-lg">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 text-primary" />
-            <span>São Paulo, SP • {properties.length} imóveis nesta área</span>
-          </div>
-        </div>
+      {/* Map controls */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <button className="w-8 h-8 bg-background rounded shadow flex items-center justify-center text-foreground hover:bg-muted">
+          +
+        </button>
+        <button className="w-8 h-8 bg-background rounded shadow flex items-center justify-center text-foreground hover:bg-muted">
+          −
+        </button>
+      </div>
+      
+      {/* Search in area button */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+        <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-sm">
+          <Search className="h-4 w-4 mr-2" />
+          Buscar nesta área
+        </Button>
       </div>
     </div>
   );
@@ -81,6 +127,7 @@ const MapPlaceholder = ({
 const PropertiesPage = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "horizontal">("grid");
 
   const handlePropertyHover = (id: string | null) => {
     setHoveredPropertyId(id);
@@ -93,58 +140,131 @@ const PropertiesPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
+      
+      {/* Search bar */}
+      <div className="border-b bg-background">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Link to="/">
+              <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div className="relative flex-1 max-w-xl">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Quartos em comprar em São Paulo, SP"
+                className="pl-9 rounded-full bg-muted border-0"
+                defaultValue="Quartos em comprar em São Paulo, SP"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <FilterBar />
 
       {/* Main Content */}
       <div className="flex-1 flex relative">
-        {/* Property List - Desktop */}
+        {/* Property List */}
         <div
-          className={`w-full lg:w-[60%] flex flex-col ${
+          className={`w-full lg:w-[55%] flex flex-col ${
             showMap ? "hidden lg:flex" : "flex"
           }`}
         >
-          {/* Results Header */}
-          <div className="px-4 py-4 border-b bg-background">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Link to="/">
-                  <Button variant="ghost" size="icon" className="rounded-xl">
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground">
-                    Imóveis para alugar em São Paulo
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {mockProperties.length} imóveis encontrados
-                  </p>
-                </div>
-              </div>
-            </div>
+          {/* Results Count */}
+          <div className="px-4 py-3 border-b bg-background">
+            <h1 className="text-lg font-bold text-foreground">
+              61.122 apartamentos
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Anúncios em São Paulo, SP
+            </p>
           </div>
 
           {/* Property Grid */}
           <ScrollArea className="flex-1">
             <div className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {mockProperties.map((property) => (
+              {/* Property Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {mockProperties.slice(0, 6).map((property) => (
                   <PropertyCard
                     key={property.id}
                     property={property}
                     isHighlighted={hoveredPropertyId === property.id}
                     onHover={handlePropertyHover}
                     onClick={handlePropertyClick}
+                    variant="grid"
                   />
                 ))}
+              </div>
+
+              {/* Neighborhoods Section */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Bairros recomendados em São Paulo
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {neighborhoods.map((neighborhood) => (
+                    <button
+                      key={neighborhood.name}
+                      className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-sm transition-all"
+                    >
+                      <h3 className="font-semibold text-foreground text-sm">{neighborhood.name}</h3>
+                      <p className="text-xs text-muted-foreground">{neighborhood.count} {neighborhood.type}</p>
+                      <p className="text-xs text-muted-foreground">para comprar</p>
+                      <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                        Mais imóveis
+                        <ChevronRight className="h-3 w-3" />
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* More Properties */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                {mockProperties.slice(6).map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    isHighlighted={hoveredPropertyId === property.id}
+                    onHover={handlePropertyHover}
+                    onClick={handlePropertyClick}
+                    variant="horizontal"
+                  />
+                ))}
+              </div>
+
+              {/* CTA Section */}
+              <div className="bg-secondary rounded-2xl p-6 mb-8 text-center">
+                <div className="flex justify-center mb-4">
+                  <Search className="h-12 w-12 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Não encontrou o imóvel que procura?
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Crie um alerta e receba notificações sobre novos imóveis.
+                </p>
+                <Button className="rounded-full">
+                  Criar alerta de imóveis
+                </Button>
+              </div>
+
+              {/* Load more */}
+              <div className="text-center pb-8">
+                <Button variant="outline" className="rounded-full px-8">
+                  Ver mais
+                </Button>
               </div>
             </div>
           </ScrollArea>
         </div>
 
-        {/* Map - Desktop */}
+        {/* Map */}
         <div
-          className={`w-full lg:w-[40%] lg:sticky lg:top-[8.5rem] lg:h-[calc(100vh-8.5rem)] ${
+          className={`w-full lg:w-[45%] lg:sticky lg:top-[10rem] lg:h-[calc(100vh-10rem)] ${
             showMap ? "block" : "hidden lg:block"
           }`}
         >
@@ -153,7 +273,7 @@ const PropertiesPage = () => {
             <div className="lg:hidden absolute top-4 left-4 z-[1000]">
               <Button
                 variant="secondary"
-                className="rounded-xl shadow-lg"
+                className="rounded-full shadow-lg"
                 onClick={() => setShowMap(false)}
               >
                 <List className="h-4 w-4 mr-2" />
