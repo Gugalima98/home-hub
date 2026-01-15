@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Map, List, MapPin, Search, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Map, List, Search, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -114,13 +115,14 @@ const MapPlaceholder = ({
 const PropertiesPage = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const navigate = useNavigate();
 
   const handlePropertyHover = (id: string | null) => {
     setHoveredPropertyId(id);
   };
 
   const handlePropertyClick = (id: string) => {
-    console.log("Clicked property:", id);
+    navigate(`/imovel/${id}`);
   };
 
   return (
