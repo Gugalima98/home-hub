@@ -1,215 +1,186 @@
-import { useState } from "react";
-import { Search, ChevronDown, SlidersHorizontal, Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useRef } from "react";
+import { 
+  SlidersHorizontal, 
+  MapPin, 
+  ChevronDown, 
+  Bell,
+  ChevronRight
+} from "lucide-react";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 
-interface FilterBarProps {
-  onFiltersChange?: (filters: any) => void;
-}
+// Filter Pill Component
+const FilterPill = ({ label, active = false, onClick, hasDropdown = true }: { label: string; active?: boolean; onClick?: () => void; hasDropdown?: boolean }) => (
+  <Button
+    variant="ghost"
+    className={`rounded-full h-[48px] px-6 text-[12px] font-bold border-none transition-all tracking-wide ${
+      active 
+        ? "bg-[#eff2ff] text-[#3b44c6] hover:bg-[#dfe6ff]" 
+        : "bg-[#f3f5f6] text-[#1f2022] hover:bg-[#e5e7eb]"
+    }`}
+    onClick={onClick}
+  >
+    {label}
+    {hasDropdown && (
+      <ChevronDown 
+        className={`ml-2 h-3 w-3 stroke-[3px] transition-transform ${active ? "text-[#3b44c6]" : "text-[#1f2022]"}`} 
+      />
+    )}
+  </Button>
+);
 
-const FilterBar = ({ onFiltersChange }: FilterBarProps) => {
-  const [priceRange, setPriceRange] = useState<[number, number]>([100000, 1000000]);
-  const [selectedBedrooms, setSelectedBedrooms] = useState<number | null>(null);
-  const [selectedParking, setSelectedParking] = useState<number | null>(null);
+export default function FilterBar() {
+  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const formatPrice = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(value);
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
   };
 
-  const bedroomOptions = [1, 2, 3, 4];
-  const parkingOptions = [1, 2, 3, 4];
-  const propertyTypeOptions = ["Apartamento", "Casa", "Studio", "Cobertura", "Kitnet"];
-
   return (
-    <div className="sticky top-14 z-40 bg-background border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 py-3">
-          {/* Search Input */}
-          <div className="relative flex-shrink-0 w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <>
+      {/* Spacer to prevent content overlap */}
+      <div className="h-[98px] w-full bg-transparent" aria-hidden="true" />
+      
+      <div className="bg-white border-b fixed top-[69px] left-0 right-0 z-30 py-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]">
+        <div className="container-fluid px-8 flex items-center gap-6">
+        
+        {/* Location Input (Left Side) */}
+        <div className="relative flex-shrink-0 w-[380px] lg:w-[460px]">
+          <div className="relative">
+            <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
             <input
               type="text"
-              placeholder="Qualquer lugar em São Paulo, SP"
-              className="w-full pl-9 pr-4 py-2.5 text-sm bg-muted rounded-full border-0 focus:ring-2 focus:ring-primary/20 focus:outline-none"
               defaultValue="Qualquer lugar em São Paulo, SP"
+              className="w-full h-[48px] rounded-full border-none bg-[#f3f5f6] pl-14 pr-6 text-[13px] font-normal text-[#1f2022] focus:outline-none focus:ring-2 focus:ring-[#3b44c6]/20 placeholder:text-gray-500 transition-shadow"
             />
           </div>
+        </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
-            {/* Comprar - Active */}
-            <Button className="rounded-full h-9 px-4 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
-              Comprar
-              <ChevronDown className="h-3.5 w-3.5 ml-1" />
-            </Button>
-
-            {/* Valor do imóvel */}
+        {/* Scrollable Filters Area */}
+        <div className="flex-1 flex items-center gap-3 overflow-hidden relative">
+          <div 
+            ref={scrollRef}
+            className="flex items-center gap-3 overflow-x-auto scrollbar-hide pr-20"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {/* Operation Type */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-                  Valor do imóvel
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                </Button>
+                <div className="inline-block"><FilterPill label="Alugar" active /></div>
               </PopoverTrigger>
-              <PopoverContent className="w-80 bg-popover z-50" align="start">
+              <PopoverContent className="w-40 p-2" align="start">
+                <div className="flex flex-col gap-1">
+                  <Button variant="ghost" className="justify-start h-10 text-sm">Comprar</Button>
+                  <Button variant="ghost" className="justify-start h-10 text-sm">Alugar</Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Price Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="inline-block"><FilterPill label="Aluguel" /></div>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
                 <div className="space-y-4">
-                  <p className="font-medium text-sm">Valor do imóvel</p>
-                  <div className="px-2">
+                  <h4 className="font-medium leading-none">Faixa de Preço</h4>
+                  <div className="pt-4">
                     <Slider
-                      value={priceRange}
-                      onValueChange={(value) => setPriceRange(value as [number, number])}
-                      min={50000}
-                      max={5000000}
-                      step={50000}
-                      className="w-full"
+                      defaultValue={[0, 10000]}
+                      max={20000}
+                      step={100}
+                      className="mb-4"
                     />
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{formatPrice(priceRange[0])}</span>
-                    <span>{formatPrice(priceRange[1])}</span>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>R$ 0</span>
+                      <span>R$ 20.000+</span>
+                    </div>
                   </div>
                 </div>
               </PopoverContent>
             </Popover>
 
-            {/* Condomínio + IPTU */}
+            {/* Type */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-                  Condomínio + IPTU
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                </Button>
+                <div className="inline-block"><FilterPill label="Tipos de imóvel" /></div>
               </PopoverTrigger>
-              <PopoverContent className="w-64 bg-popover z-50" align="start">
+              <PopoverContent className="w-56 p-4" align="start">
                 <div className="space-y-3">
-                  <p className="font-medium text-sm">Valor máximo</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {["Até R$ 500", "Até R$ 1.000", "Até R$ 1.500", "Até R$ 2.000"].map((option) => (
-                      <button
-                        key={option}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
-                      >
-                        {option}
-                      </button>
-                    ))}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="apt" defaultChecked />
+                    <Label htmlFor="apt">Apartamento</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="house" />
+                    <Label htmlFor="house">Casa</Label>
                   </div>
                 </div>
               </PopoverContent>
             </Popover>
 
-            {/* Apartamento */}
+            {/* Bedrooms */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-                  Apartamento
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                </Button>
+                <div className="inline-block"><FilterPill label="1+ quartos" active /></div>
               </PopoverTrigger>
-              <PopoverContent className="w-56 bg-popover z-50" align="start">
-                <div className="space-y-3">
-                  <p className="font-medium text-sm">Tipo de imóvel</p>
-                  {propertyTypeOptions.map((type) => (
-                    <label key={type} className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox defaultChecked={type === "Apartamento"} />
-                      <span className="text-sm">{type}</span>
-                    </label>
-                  ))}
+              <PopoverContent className="w-80 p-4" align="start">
+                <div className="space-y-4">
+                   <p>Opções de quartos</p>
                 </div>
               </PopoverContent>
             </Popover>
 
-            {/* Quartos */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-                  1+ quartos
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 bg-popover z-50" align="start">
-                <div className="space-y-3">
-                  <p className="font-medium text-sm">Quartos</p>
-                  <div className="flex gap-2">
-                    {bedroomOptions.map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setSelectedBedrooms(selectedBedrooms === num ? null : num)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          selectedBedrooms === num
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted hover:bg-muted/80"
-                        }`}
-                      >
-                        {num}+
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+             {/* Parking */}
+             <FilterPill label="Vagas de garagem" />
 
-            {/* Vagas */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-                  Vagas de garagem
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 bg-popover z-50" align="start">
-                <div className="space-y-3">
-                  <p className="font-medium text-sm">Vagas de garagem</p>
-                  <div className="flex gap-2">
-                    {parkingOptions.map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setSelectedParking(selectedParking === num ? null : num)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          selectedParking === num
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted hover:bg-muted/80"
-                        }`}
-                      >
-                        {num}+
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+             {/* Bathrooms */}
+             <FilterPill label="1+ banheiros" active />
 
-            {/* Banheiros */}
-            <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0">
-              1+
-              <ChevronDown className="h-3.5 w-3.5 ml-1" />
-            </Button>
+             {/* Area */}
+             <FilterPill label="Área" />
 
-            {/* Mais filtros */}
-            <Button variant="outline" className="rounded-full h-9 px-4 text-sm font-medium shrink-0 gap-1.5">
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Mais filtros
-            </Button>
           </div>
+          
+          {/* Scroll Arrow (Gradient Fade) */}
+          <div className="absolute right-0 h-full flex items-center bg-gradient-to-l from-white via-white to-transparent pl-20">
+             <button 
+                onClick={scrollRight}
+                className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors z-10"
+             >
+                <ChevronRight className="h-5 w-5 text-gray-600" />
+             </button>
+          </div>
+        </div>
+
+        {/* Right Actions (Fixed) */}
+        <div className="flex items-center gap-3 flex-shrink-0 pl-4 border-l border-gray-100">
+           {/* More Filters Button */}
+          <Button variant="ghost" className="rounded-full h-[48px] gap-2 bg-[#f3f5f6] hover:bg-[#e5e7eb] text-[#1f2022] text-[12px] font-bold border-none px-6">
+            <SlidersHorizontal className="h-4 w-4" />
+            Mais filtros
+          </Button>
 
           {/* Create Alert Button */}
-          <Button variant="ghost" className="rounded-full h-9 px-4 text-sm font-medium shrink-0 gap-2 text-muted-foreground hover:text-foreground">
-            <Bell className="h-4 w-4" />
-            Criar alerta de imóvel
+          <Button variant="ghost" className="rounded-full h-[48px] gap-2 bg-[#f3f5f6] hover:bg-[#e5e7eb] text-[#1f2022] text-[12px] font-bold border-none px-6 hidden xl:inline-flex">
+             <Bell className="h-4 w-4" />
+             Criar alerta de imóvel
           </Button>
         </div>
+
       </div>
     </div>
+    </>
   );
-};
-
-export default FilterBar;
+}

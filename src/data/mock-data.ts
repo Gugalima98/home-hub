@@ -1,3 +1,18 @@
+export const locations = [
+  {
+    city: "São Paulo",
+    neighborhoods: ["Jardins", "Bela Vista", "Consolação", "Jardim Europa", "Pinheiros", "Vila Madalena", "Moema", "República", "Perdizes", "Itaim Bibi"],
+  },
+  {
+    city: "Rio de Janeiro",
+    neighborhoods: ["Copacabana", "Ipanema", "Leblon", "Botafogo", "Flamengo", "Laranjeiras"],
+  },
+  {
+    city: "Belo Horizonte",
+    neighborhoods: ["Savassi", "Lourdes", "Funcionários", "Pampulha", "Anchieta", "Serra"],
+  },
+];
+
 import property1 from "@/assets/property-1.jpg";
 import property2 from "@/assets/property-2.jpg";
 import property3 from "@/assets/property-3.jpg";

@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
 import { mockProperties } from "@/data/mock-data";
+import { SEO } from "@/components/SEO";
 
 // Neighborhoods data
 const neighborhoods = [
@@ -127,6 +128,10 @@ const PropertiesPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO 
+        title="Imóveis para Alugar e Comprar em São Paulo" 
+        description="Confira milhares de imóveis para alugar e comprar em São Paulo. Apartamentos, casas, studios e muito mais."
+      />
       <Header variant="search" />
       <FilterBar />
 

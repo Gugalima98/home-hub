@@ -4,24 +4,24 @@ const footerLinks = {
   sobreNos: {
     title: "Sobre nós",
     links: [
-      "Conheça o QuintoAndar",
-      "Blog do QuintoAndar",
+      "Conheça o R7 Consultoria",
+      "Blog do R7 Consultoria",
       "Responsabilidade Social",
       "Contato",
       "Central de Ajuda",
       "Seja um Corretor Parceiro",
-      "Trabalhe na QuintoAndar",
+      "Trabalhe na R7 Consultoria",
       "Segurança",
       "Investidores",
-      "QuintoAndar Empresas",
+      "R7 Consultoria Empresas",
     ],
   },
   produtos: {
     title: "Produtos",
     links: [
-      "Alugar pelo QuintoAndar",
+      "Alugar pelo R7 Consultoria",
       "Administração de aluguéis",
-      "Comprar com a QuintoAndar",
+      "Comprar com a R7 Consultoria",
       "Consórcio",
       "Financiamento",
       "QPreço",
@@ -106,9 +106,9 @@ const Footer = () => {
           <div className="bg-primary rounded-2xl p-6 text-primary-foreground">
             <div className="flex items-center gap-2 mb-4">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
-                <span className="text-lg font-bold">Q</span>
+                <span className="text-lg font-bold">R7</span>
               </div>
-              <span className="text-xl font-bold">QuintoAndar</span>
+              <span className="text-xl font-bold">R7 Consultoria</span>
             </div>
             <p className="text-sm text-primary-foreground/80 mb-4">
               A sua próxima casa está aqui. Alugue ou compre de forma simples, rápida e segura.
@@ -204,7 +204,7 @@ const Footer = () => {
           {/* Copyright */}
           <div className="mt-8 text-center text-xs text-muted-foreground">
             <p>
-              © 2025 QuintoAndar. Todos os direitos reservados. CRECI-SP: 034547-J
+              © 2025 R7 Consultoria. Todos os direitos reservados. CRECI-SP: 034547-J
             </p>
           </div>
         </div>

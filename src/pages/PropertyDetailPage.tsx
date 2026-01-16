@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import Header from "@/components/Header";
 import PropertyCard from "@/components/PropertyCard";
 import { mockProperties } from "@/data/mock-data";
+import { SEO } from "@/components/SEO";
 
 const PropertyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +41,7 @@ const PropertyDetailPage = () => {
   if (!property) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+        <SEO title="Imóvel não encontrado" />
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Imóvel não encontrado</h1>
           <Button onClick={() => navigate("/imoveis")}>Voltar para busca</Button>
@@ -65,6 +67,7 @@ const PropertyDetailPage = () => {
   if (showAllPhotos) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
+        <SEO title={`Fotos - ${property.title}`} />
         <div className="flex items-center justify-between p-4 text-white">
           <button onClick={() => setShowAllPhotos(false)} className="flex items-center gap-2">
             <ArrowLeft className="h-5 w-5" />
@@ -102,6 +105,11 @@ const PropertyDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title={property.title} 
+        description={`${property.description.substring(0, 150)}...`}
+        image={property.images[0]}
+      />
       <Header />
 
       {/* Hero Gallery Section */}
