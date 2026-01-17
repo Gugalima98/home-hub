@@ -3,7 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Map, List, Search, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
 import { mockProperties } from "@/data/mock-data";
@@ -139,25 +146,32 @@ const PropertiesPage = () => {
       <div className="flex-1 flex relative">
         {/* Property List */}
         <div
-          className={`w-full lg:w-[55%] flex flex-col ${
+          className={`w-full lg:w-[60%] flex flex-col ${
             showMap ? "hidden lg:flex" : "flex"
           }`}
         >
           {/* Results Count */}
-          <div className="px-4 py-3 border-b bg-background">
-            <h1 className="text-lg font-bold text-foreground">
-              61.122 apartamentos
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Anúncios em São Paulo, SP
-            </p>
+          <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-[#1f2022]">
+                61.122 imóveis
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                à venda em São Paulo, SP
+              </p>
+            </div>
+            {/* Sort Button Placeholder - match print style */}
+             <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
+                Mais relevantes
+                <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
+             </Button>
           </div>
 
           {/* Property Grid */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 bg-gray-50/50">
             <div className="p-4">
               {/* Property Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-8">
                 {mockProperties.slice(0, 6).map((property) => (
                   <PropertyCard
                     key={property.id}
@@ -171,30 +185,46 @@ const PropertiesPage = () => {
               </div>
 
               {/* Neighborhoods Section */}
-              <div className="mb-8">
-                <h2 className="text-lg font-bold text-foreground mb-4">
+              <div className="mb-10">
+                <h2 className="text-lg font-bold text-[#1f2022] mb-4">
                   Bairros recomendados em São Paulo
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {neighborhoods.map((neighborhood) => (
                     <button
                       key={neighborhood.name}
-                      className="text-left p-3 rounded-xl border bg-card hover:border-primary hover:shadow-sm transition-all"
+                      className="group flex flex-col items-start text-left p-5 rounded-xl bg-[#f5f5f7] hover:bg-[#ebebeb] transition-colors h-48 relative"
                     >
-                      <h3 className="font-semibold text-foreground text-sm">{neighborhood.name}</h3>
-                      <p className="text-xs text-muted-foreground">{neighborhood.count} {neighborhood.type}</p>
-                      <p className="text-xs text-muted-foreground">para comprar</p>
-                      <p className="text-xs text-primary mt-2 flex items-center gap-1">
-                        Mais imóveis
-                        <ChevronRight className="h-3 w-3" />
+                      <div className="flex justify-between items-start w-full mb-1">
+                        <h3 className="text-lg font-bold text-[#1f2022]">{neighborhood.name}</h3>
+                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                      </div>
+                      
+                      <p className="text-sm text-gray-500 font-normal leading-relaxed mb-4">
+                        {neighborhood.count} imóveis para<br/>comprar.
                       </p>
+                      
+                      <div className="mt-auto">
+                        <p className="text-xs text-gray-500 font-medium mb-0.5">Valor médio</p>
+                        <p className="text-sm font-bold text-[#1f2022]">R$ 636.500</p>
+                      </div>
                     </button>
                   ))}
                 </div>
+                
+                {/* Navigation Buttons */}
+                <div className="flex justify-end gap-3 mt-4">
+                  <button className="w-10 h-10 rounded-full bg-[#f5f5f7] flex items-center justify-center hover:bg-[#ebebeb] transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                     <ChevronRight className="h-5 w-5 rotate-180" />
+                  </button>
+                  <button className="w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors text-[#1f2022]">
+                     <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
 
-              {/* More Properties */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              {/* More Properties (Unified Grid) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-10">
                 {mockProperties.slice(6).map((property) => (
                   <PropertyCard
                     key={property.id}
@@ -202,40 +232,104 @@ const PropertiesPage = () => {
                     isHighlighted={hoveredPropertyId === property.id}
                     onHover={handlePropertyHover}
                     onClick={handlePropertyClick}
-                    variant="horizontal"
+                    variant="grid" 
                   />
                 ))}
               </div>
 
-              {/* CTA Section */}
-              <div className="bg-secondary rounded-2xl p-6 mb-8 text-center">
-                <div className="flex justify-center mb-4">
-                  <Search className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Não encontrou o imóvel que procura?
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Crie um alerta e receba notificações sobre novos imóveis.
-                </p>
-                <Button className="rounded-full">
-                  Criar alerta de imóveis
-                </Button>
-              </div>
+              {/* CTA Section Removed */}
+
 
               {/* Load more */}
-              <div className="text-center pb-8">
-                <Button variant="outline" className="rounded-full px-8">
+              <div className="w-full mb-16">
+                <Button variant="default" className="w-full rounded-md h-12 bg-[#3b44c6] hover:bg-[#2a308c] font-bold text-base">
                   Ver mais
                 </Button>
               </div>
+
+              {/* SEO Links Sections */}
+              <div className="space-y-12 mb-16">
+                {/* Neighborhood Links */}
+                <div>
+                  <h3 className="text-lg font-bold text-[#1f2022] mb-6">
+                    Procure pelos principais bairros em São Paulo
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
+                    {[
+                      "Aluguel em Bela Vista", "Aluguel em Vila Andrade", "Aluguel em Jardim Paulista", "Aluguel em Vila Clementino",
+                      "Aluguel em Perdizes", "Aluguel em Consolação", "Aluguel em Santana",
+                      "Aluguel em Indianópolis", "Aluguel em Vila Olímpia", "Aluguel em Santo Amaro"
+                    ].map((link, i) => (
+                      <a key={i} href="#" className="text-sm text-gray-800 underline hover:text-blue-600 decoration-1 underline-offset-2 font-medium block">
+                        {link}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
+                {/* City Links */}
+                <div>
+                  <h3 className="text-lg font-bold text-[#1f2022] mb-6">
+                    Amplie as chances de encontrar o lar ideal nas principais cidades
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
+                    {[
+                      "Aluguel em São Caetano do Sul", "Aluguel em Santo André", "Aluguel em Taboão da Serra", "Aluguel em Embu das Artes",
+                      "Aluguel em Diadema", "Aluguel em São Bernardo do Campo", "Aluguel em Carapicuíba",
+                      "Aluguel em Guarulhos", "Aluguel em Osasco", "Aluguel em Mauá"
+                    ].map((link, i) => (
+                      <a key={i} href="#" className="text-sm text-gray-800 underline hover:text-blue-600 decoration-1 underline-offset-2 font-medium block">
+                        {link}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* FAQ Section */}
+              <div className="flex flex-col md:flex-row gap-8 pb-16">
+                <div className="w-full md:w-1/3">
+                  <h3 className="text-xl font-bold text-[#1f2022] leading-tight">
+                    Perguntas frequentes sobre comprar imóvel em São Paulo
+                  </h3>
+                </div>
+                <div className="w-full md:w-2/3">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
+                        Quais são os documentos necessários para comprar imóvel em São Paulo?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-gray-600">
+                        Para comprar um imóvel, geralmente são necessários documentos como RG, CPF, comprovante de residência, comprovante de renda e certidões negativas. O QuintoAndar auxilia em toda essa documentação.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-2">
+                      <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
+                        Quais os benefícios de comprar imóvel em São Paulo pelo QuintoAndar?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-gray-600">
+                        Oferecemos fotos profissionais, tour virtual, negociação online transparente, assessoria jurídica completa e as melhores taxas de financiamento do mercado.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="item-3">
+                      <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
+                        Posso comprar imóvel em São Paulo pelo QuintoAndar utilizando o FGTS?
+                      </AccordionTrigger>
+                      <AccordionContent className="text-gray-600">
+                        Sim, é possível utilizar o saldo do FGTS para a compra do seu imóvel, desde que você e o imóvel se enquadrem nas regras do SFH (Sistema Financeiro de Habitação).
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+              </div>
             </div>
+            <Footer />
           </ScrollArea>
         </div>
 
         {/* Map */}
         <div
-          className={`w-full lg:w-[45%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
+          className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
             showMap ? "block" : "hidden lg:block"
           }`}
         >
