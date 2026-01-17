@@ -13,6 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FilterBar from "@/components/FilterBar";
 import PropertyCard from "@/components/PropertyCard";
+import MapComponent from "@/components/Map";
 import { mockProperties } from "@/data/mock-data";
 import { SEO } from "@/components/SEO";
 
@@ -333,24 +334,7 @@ const PropertiesPage = () => {
             showMap ? "block" : "hidden lg:block"
           }`}
         >
-          {/* Mobile Back Button */}
-          {showMap && (
-            <div className="lg:hidden absolute top-4 left-4 z-[1000]">
-              <Button
-                variant="secondary"
-                className="rounded-full shadow-lg"
-                onClick={() => setShowMap(false)}
-              >
-                <List className="h-4 w-4 mr-2" />
-                Ver lista
-              </Button>
-            </div>
-          )}
-
-          <MapPlaceholder
-            properties={mockProperties}
-            hoveredPropertyId={hoveredPropertyId}
-          />
+           <MapComponent properties={mockProperties} hoveredPropertyId={hoveredPropertyId} />
         </div>
 
         {/* Mobile Map Toggle Button */}
