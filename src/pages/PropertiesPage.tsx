@@ -134,6 +134,14 @@ const PropertiesPage = () => {
     navigate(`/imovel/${id}`);
   };
 
+  const handleMarkerClick = (id: string) => {
+    const element = document.getElementById(`property-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHoveredPropertyId(id);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO 
@@ -174,14 +182,15 @@ const PropertiesPage = () => {
               {/* Property Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-8">
                 {mockProperties.slice(0, 6).map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    property={property}
-                    isHighlighted={hoveredPropertyId === property.id}
-                    onHover={handlePropertyHover}
-                    onClick={handlePropertyClick}
-                    variant="grid"
-                  />
+                  <div key={property.id} id={`property-${property.id}`}>
+                    <PropertyCard
+                      property={property}
+                      isHighlighted={hoveredPropertyId === property.id}
+                      onHover={handlePropertyHover}
+                      onClick={handlePropertyClick}
+                      variant="grid"
+                    />
+                  </div>
                 ))}
               </div>
 
@@ -227,14 +236,15 @@ const PropertiesPage = () => {
               {/* More Properties (Unified Grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-10">
                 {mockProperties.slice(6).map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    property={property}
-                    isHighlighted={hoveredPropertyId === property.id}
-                    onHover={handlePropertyHover}
-                    onClick={handlePropertyClick}
-                    variant="grid" 
-                  />
+                  <div key={property.id} id={`property-${property.id}`}>
+                    <PropertyCard
+                      property={property}
+                      isHighlighted={hoveredPropertyId === property.id}
+                      onHover={handlePropertyHover}
+                      onClick={handlePropertyClick}
+                      variant="grid" 
+                    />
+                  </div>
                 ))}
               </div>
 
@@ -334,7 +344,11 @@ const PropertiesPage = () => {
             showMap ? "block" : "hidden lg:block"
           }`}
         >
-           <MapComponent properties={mockProperties} hoveredPropertyId={hoveredPropertyId} />
+           <MapComponent 
+            properties={mockProperties} 
+            hoveredPropertyId={hoveredPropertyId} 
+            onMarkerClick={handleMarkerClick}
+           />
         </div>
 
         {/* Mobile Map Toggle Button */}
