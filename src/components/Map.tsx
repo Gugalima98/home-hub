@@ -1,14 +1,14 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Property } from '@/data/mock-data';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// Fix for default Leaflet icons in Vite
+// Fix for default Leaflet icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -20,44 +20,84 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Custom Cluster Icon (Blue Circle with Count)
+// Ícone de Cluster (Bolinha Azul com número) - Mais compacto
 const createClusterCustomIcon = (cluster: any) => {
   return L.divIcon({
-    html: `<div class="flex items-center justify-center w-full h-full bg-[#3b44c6] text-white font-bold rounded-full border-2 border-white shadow-md text-sm">
+    html: `<div class="flex items-center justify-center w-full h-full bg-[#3b44c6] text-white font-bold rounded-full border-[3px] border-white shadow-lg text-xs">
              ${cluster.getChildCount()}
            </div>`,
     className: 'custom-marker-cluster',
-    iconSize: L.point(40, 40, true),
+    iconSize: L.point(34, 34, true),
   });
 };
 
-// Custom Marker component to display price
-const createCustomIcon = (price: number, isHovered: boolean) => {
-  const formattedPrice = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(price);
-
-  const bgColor = isHovered ? 'bg-[#1e2476]' : 'bg-[#3b44c6]';
-  const scale = isHovered ? 'scale-110 z-[1000]' : 'scale-100';
-
+// Ícone de Marcador Individual (Bolinha Azul com "1") - Mais compacto
+const createCustomIcon = (isHovered: boolean) => {
+  const bgColor = isHovered ? 'bg-[#1e2476] scale-110' : 'bg-[#3b44c6]';
   return L.divIcon({
-    className: 'custom-marker',
-    html: `<div class="${bgColor} text-white font-bold text-xs px-2 py-1 rounded-md shadow-md border border-white whitespace-nowrap transition-all duration-200 ${scale} cursor-pointer">
-            ${formattedPrice}
+    className: 'custom-marker-single',
+    html: `<div class="flex items-center justify-center w-full h-full ${bgColor} text-white font-bold rounded-full border-[2px] border-white shadow-md text-[10px] transition-all duration-200">
+             1
            </div>`,
-    iconSize: [80, 30],
-    iconAnchor: [40, 15], // Center anchor
+    iconSize: L.point(26, 26, true),
   });
 };
 
-// Component to update map center when properties change
-function MapUpdater({ center }: { center: [number, number] }) {
-  const map = useMap();
+// Componente invisível que escuta os movimentos do mapa
+function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      const bounds = map.getBounds();
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      });
+    },
+    // Adicionamos zoomend explicitamente para garantir
+    zoomend: () => {
+      const bounds = map.getBounds();
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      });
+    }
+  });
+
+  // Dispara o filtro inicial ao carregar o mapa
   useEffect(() => {
-    map.flyTo(center, 13);
-  }, [center, map]);
+    map.invalidateSize(); // Força ajuste de layout
+    const bounds = map.getBounds();
+    onBoundsChange({
+      north: bounds.getNorth(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      west: bounds.getWest(),
+    });
+  }, [map]); // Dependência map está correta
+
+  return null;
+}
+
+// Component to update map center/bounds only on initial load
+function MapUpdater({ properties }: { properties: Property[] }) {
+  const map = useMapEvents({});
+  const hasInitialFocus = useRef(false);
+  
+  useEffect(() => {
+    if (!hasInitialFocus.current && properties.length > 0) {
+      const bounds = L.latLngBounds(properties.map(p => p.coordinates));
+      map.fitBounds(bounds, { 
+        padding: [80, 80],
+        maxZoom: 15
+      });
+      hasInitialFocus.current = true;
+    }
+  }, [properties, map]);
+  
   return null;
 }
 
@@ -65,42 +105,51 @@ interface MapComponentProps {
   properties: Property[];
   hoveredPropertyId?: string | null;
   onMarkerClick?: (id: string) => void;
+  onSearchArea?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 }
 
-export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick }: MapComponentProps) {
+export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick, onSearchArea }: MapComponentProps) {
   const navigate = useNavigate();
-  // Default center (São Paulo) if no properties
+
+  // Centro inicial (São Paulo)
   const defaultCenter: [number, number] = [-23.55052, -46.633308];
-  const center = properties.length > 0 ? properties[0].coordinates : defaultCenter;
+  const initialCenter = properties.length > 0 ? properties[0].coordinates : defaultCenter;
 
   return (
-    <div className="h-full w-full relative z-0">
+    <div className="h-full w-full relative z-0 group">
       <MapContainer
-        center={center}
+        center={initialCenter}
         zoom={13}
+        minZoom={13} // Travado ainda mais perto (Bairro)
+        maxZoom={18}
         scrollWheelZoom={true}
         className="h-full w-full"
-        zoomControl={false} // We can add custom zoom control later
+        zoomControl={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Light theme closer to QuintoAndar
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
         
-        <MapUpdater center={center} />
+        <MapUpdater properties={properties} />
+        
+        {/* Controlador de Eventos: Conecta o Mapa à Lista */}
+        {onSearchArea && (
+          <MapController onBoundsChange={onSearchArea} />
+        )}
 
         <MarkerClusterGroup
           chunkedLoading
           iconCreateFunction={createClusterCustomIcon}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={60}
+          maxClusterRadius={300} // Aumentado para 300px (Extremo)
         >
           {properties.map((property) => (
             <Marker
               key={property.id}
               position={property.coordinates}
-              icon={createCustomIcon(property.totalPrice, hoveredPropertyId === property.id)}
+              icon={createCustomIcon(hoveredPropertyId === property.id)}
               zIndexOffset={hoveredPropertyId === property.id ? 1000 : 0}
               eventHandlers={{
                   click: () => {

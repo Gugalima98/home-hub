@@ -122,6 +122,7 @@ const MapPlaceholder = ({
 };
 
 const PropertiesPage = () => {
+  const [filteredProperties, setFilteredProperties] = useState(mockProperties);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
@@ -140,6 +141,21 @@ const PropertiesPage = () => {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHoveredPropertyId(id);
     }
+  };
+
+  // Filter properties based on map bounds
+  const handleAreaSearch = (bounds: { north: number; south: number; east: number; west: number }) => {
+    const visibleProperties = mockProperties.filter(property => {
+      const lat = property.coordinates[0];
+      const lng = property.coordinates[1];
+      
+      const isInsideLat = lat <= bounds.north && lat >= bounds.south;
+      const isInsideLng = lng <= bounds.east && lng >= bounds.west;
+      
+      return isInsideLat && isInsideLng;
+    });
+
+    setFilteredProperties(visibleProperties);
   };
 
   return (
@@ -163,10 +179,10 @@ const PropertiesPage = () => {
           <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-[#1f2022]">
-                61.122 imóveis
+                {filteredProperties.length} imóveis
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                à venda em São Paulo, SP
+                à venda na área visível
               </p>
             </div>
             {/* Sort Button Placeholder - match print style */}
@@ -181,17 +197,24 @@ const PropertiesPage = () => {
             <div className="p-4">
               {/* Property Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-8">
-                {mockProperties.slice(0, 6).map((property) => (
-                  <div key={property.id} id={`property-${property.id}`}>
-                    <PropertyCard
-                      property={property}
-                      isHighlighted={hoveredPropertyId === property.id}
-                      onHover={handlePropertyHover}
-                      onClick={handlePropertyClick}
-                      variant="grid"
-                    />
+                {filteredProperties.length > 0 ? (
+                  filteredProperties.map((property) => (
+                    <div key={property.id} id={`property-${property.id}`}>
+                      <PropertyCard
+                        property={property}
+                        isHighlighted={hoveredPropertyId === property.id}
+                        onHover={handlePropertyHover}
+                        onClick={handlePropertyClick}
+                        variant="grid"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center text-gray-500">
+                    <p className="text-lg font-semibold">Nenhum imóvel encontrado nesta área.</p>
+                    <p className="text-sm">Mova o mapa para ver mais opções.</p>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* Neighborhoods Section */}
@@ -233,23 +256,7 @@ const PropertiesPage = () => {
                 </div>
               </div>
 
-              {/* More Properties (Unified Grid) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-10">
-                {mockProperties.slice(6).map((property) => (
-                  <div key={property.id} id={`property-${property.id}`}>
-                    <PropertyCard
-                      property={property}
-                      isHighlighted={hoveredPropertyId === property.id}
-                      onHover={handlePropertyHover}
-                      onClick={handlePropertyClick}
-                      variant="grid" 
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA Section Removed */}
-
+              {/* More Properties (Unified Grid removed as filtered list is dynamic) */}
 
               {/* Load more */}
               <div className="w-full mb-16">
@@ -348,6 +355,7 @@ const PropertiesPage = () => {
             properties={mockProperties} 
             hoveredPropertyId={hoveredPropertyId} 
             onMarkerClick={handleMarkerClick}
+            onSearchArea={handleAreaSearch}
            />
         </div>
 
