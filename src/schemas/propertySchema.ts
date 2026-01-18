@@ -30,6 +30,8 @@ export const propertySchema = z.object({
   city: z.string().min(2, "Cidade é obrigatória"),
   state: z.string().min(2, "Estado é obrigatório").default("SP"),
   near_subway: z.boolean().default(false),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 
   // Valores
   price: z.coerce.number().min(1, "O valor é obrigatório"),

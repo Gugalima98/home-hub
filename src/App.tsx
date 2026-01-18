@@ -31,12 +31,11 @@ const App = () => (
         <FilterProvider>
           <BrowserRouter>
             <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/imoveis" element={<PropertiesPage />} />
-              <Route path="/imovel/:id" element={<PropertyDetailPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+                                      {/* Public Routes */}
+                                      <Route path="/" element={<Index />} />
+                                      <Route path="/imoveis" element={<PropertiesPage />} />
+                                      <Route path="/imovel/:code/:operation/:slug" element={<PropertyDetailPage />} />
+                                      <Route path="/login" element={<Login />} />              <Route path="/register" element={<Register />} />
 
               {/* User Dashboard */}
               <Route

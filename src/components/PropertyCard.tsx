@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 // Interface compatível com o Supabase
 export interface Property {
   id: string;
+  code?: number; // Código sequencial amigável
   title: string;
   description?: string;
   address: string;

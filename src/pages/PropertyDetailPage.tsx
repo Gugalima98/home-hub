@@ -27,7 +27,7 @@ import { SEO } from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 
 const PropertyDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,13 +39,21 @@ const PropertyDetailPage = () => {
   // Fetch Property
   useEffect(() => {
     const fetchProperty = async () => {
-      if (!id) return;
+      if (!code) return;
       setLoading(true);
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("id", id)
-        .single();
+
+      let query = supabase.from("properties").select("*");
+
+      // UUID Regex Check
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(code);
+
+      if (isUuid) {
+        query = query.eq("id", code);
+      } else {
+        query = query.eq("code", code);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) {
         console.error("Error fetching property:", error);
@@ -56,13 +64,12 @@ const PropertyDetailPage = () => {
     };
 
     fetchProperty();
-  }, [id]);
+  }, [code]);
 
   // Flatten Images Helper
   const imageList = useMemo(() => {
     if (!property?.images) return ["/placeholder.svg"];
     const allImages: string[] = [];
-    // Ordem de prioridade
     const categories = ["Fachada", "Sala", "Cozinha", "Quartos", "Banheiros", "Varanda", "Garagem", "Quintal", "Vista", "Área de Serviço", "Planta", "Outros"];
     
     categories.forEach(cat => {
@@ -71,7 +78,6 @@ const PropertyDetailPage = () => {
       }
     });
     
-    // Add remaining
     Object.keys(property.images).forEach(cat => {
       if (!categories.includes(cat)) {
         allImages.push(...(property.images[cat] || []));
@@ -114,12 +120,10 @@ const PropertyDetailPage = () => {
   const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % imageList.length);
   const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + imageList.length) % imageList.length);
 
-  // Arrays from DB (might be null initially)
   const availableItems = property.available_items || [];
   const unavailableItems = property.unavailable_items || [];
   const condoAmenities = property.condo_amenities || [];
 
-  // Full screen gallery modal
   if (showAllPhotos) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
@@ -168,11 +172,9 @@ const PropertyDetailPage = () => {
       />
       <Header />
 
-      {/* Hero Gallery Section */}
       <div className="bg-white border-b border-gray-100">
         <div className="h-[550px] lg:h-[600px] flex flex-col lg:flex-row gap-6 bg-white overflow-hidden">
           
-          {/* Column 1: Info (Left) */}
           <div className="lg:w-[36%] shrink-0 bg-[#f8f9fa] p-6 lg:p-8 flex flex-col justify-between overflow-y-auto relative z-10">
             <div>
               <h1 className="text-3xl lg:text-[2.5rem] font-bold text-[#1f2022] leading-tight mb-8">
@@ -201,7 +203,6 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Column 2: Image 1 */}
           <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
             <img
               src={imageList[0]}
@@ -240,7 +241,6 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Column 3: Image 2 */}
           <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
             <img
               src={imageList[1] || imageList[0]}
@@ -264,7 +264,6 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Mobile Gallery */}
           <div className="lg:hidden relative h-[300px] w-full bg-gray-100">
              <img
               src={imageList[currentImageIndex]}
@@ -285,16 +284,13 @@ const PropertyDetailPage = () => {
         </div>
       </div>
 
-      {/* Content Below Hero */}
       <div className="bg-white flex-1">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
           
           <div className="flex flex-col lg:flex-row gap-12 items-start">
             
-            {/* Main Details (Left) */}
             <div className="flex-1 min-w-0">
               
-              {/* Breadcrumb */}
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-6 font-normal overflow-x-auto whitespace-nowrap">
                 <Link to="/" className="hover:underline">Início</Link>
                 <ChevronRight className="h-3 w-3" />
@@ -303,9 +299,10 @@ const PropertyDetailPage = () => {
                 <Link to="/imoveis" className="hover:underline">{property.neighborhood}</Link>
                 <ChevronRight className="h-3 w-3" />
                 <span>{property.address}</span>
+                <ChevronRight className="h-3 w-3" />
+                <span>Cód. {property.code}</span>
               </div>
 
-              {/* Map Banner Card */}
               <div className="relative h-24 bg-gray-100 rounded-xl overflow-hidden mb-8 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group">
                 <div className="absolute inset-0 opacity-20 bg-[url('https://maps.wikimedia.org/img/osm-intl,13,a,a,270x100.png')] bg-cover bg-center" />
                 <div className="absolute inset-0 bg-white/60" />
@@ -319,7 +316,6 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
 
-              {/* Icons Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-6 gap-x-4 mb-8">
                 <div className="flex items-center gap-3">
                   <Maximize className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
@@ -340,7 +336,6 @@ const PropertyDetailPage = () => {
                   <Car className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
                   <span className="text-sm text-[#1f2022]">{property.parking_spots} vaga</span>
                 </div>
-                {/* Outros ícones condicionais */}
                 <div className="flex items-center gap-3">
                   <Sofa className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
                   <span className="text-sm text-[#1f2022]">{property.furnished ? 'Mobiliado' : 'Sem mobília'}</span>
@@ -351,7 +346,14 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
 
-              {/* Description */}
+              <div className="flex gap-3 mb-8">
+                <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">Cód. {property.code}</span>
+                <span className="flex items-center gap-1 text-gray-500 text-xs">
+                  <div className="w-3 h-3 rounded-full border border-gray-400 flex items-center justify-center text-[8px]">L</div>
+                  Publicado há 3 dias
+                </span>
+              </div>
+
               <div className="mb-10">
                 <p className={`text-gray-700 leading-relaxed text-[15px] ${!showFullDescription ? 'line-clamp-3' : ''}`}>
                   {property.description}
@@ -365,10 +367,8 @@ const PropertyDetailPage = () => {
                 </button>
               </div>
 
-              {/* Amenities Grid */}
               <div className="mb-8">
                 <div className="grid md:grid-cols-2 gap-12">
-                  {/* Available (Combine Amenities + Available Items) */}
                   <div>
                     <h3 className="text-lg font-bold text-[#1f2022] mb-4">Comodidades</h3>
                     <div className="space-y-3">
@@ -380,7 +380,6 @@ const PropertyDetailPage = () => {
                       ))}
                     </div>
                   </div>
-                  {/* Unavailable */}
                   {unavailableItems.length > 0 && (
                     <div>
                         <h3 className="text-lg font-bold text-gray-400 mb-4">Itens indisponíveis</h3>
@@ -400,15 +399,11 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
 
-              {/* (Opcional) Similar properties section could also be fetched from Supabase here */}
-
             </div>
 
-            {/* Right Sidebar - Sticky Price Calculator */}
             <div className="lg:w-[340px] shrink-0">
                <div className="sticky top-24">
                   <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                    {/* Cost breakdown */}
                     <div className="space-y-3 text-sm mb-6">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">{property.operation_type === 'rent' ? 'Aluguel' : 'Valor'}</span>
@@ -434,7 +429,6 @@ const PropertyDetailPage = () => {
                       )}
                     </div>
 
-                    {/* Total */}
                     <div className="flex justify-between items-baseline mb-2">
                       <span className="font-bold text-lg text-[#1f2022]">Total</span>
                       <span className="font-bold text-xl text-[#1f2022]">{formatPrice(totalMonthly)}</span>
@@ -449,7 +443,6 @@ const PropertyDetailPage = () => {
                       </Button>
                     </div>
 
-                    {/* Footer Actions */}
                     <div className="flex gap-3 pt-2">
                       <button 
                         className="flex-1 h-10 rounded-full bg-[#f3f5f6] hover:bg-[#e5e7eb] flex items-center justify-center gap-2 text-xs font-bold text-[#1f2022] transition-colors"

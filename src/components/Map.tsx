@@ -2,11 +2,12 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Property } from '@/data/mock-data';
 import { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Property } from '@/components/PropertyCard';
+import { generatePropertyUrl } from '@/lib/utils';
 
 // Fix for default Leaflet icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -55,7 +56,6 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
         west: bounds.getWest(),
       });
     },
-    // Adicionamos zoomend explicitamente para garantir
     zoomend: () => {
       const bounds = map.getBounds();
       onBoundsChange({
@@ -69,7 +69,7 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
 
   // Dispara o filtro inicial ao carregar o mapa
   useEffect(() => {
-    map.invalidateSize(); // Força ajuste de layout
+    map.invalidateSize();
     const bounds = map.getBounds();
     onBoundsChange({
       north: bounds.getNorth(),
@@ -77,7 +77,7 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
       east: bounds.getEast(),
       west: bounds.getWest(),
     });
-  }, [map]); // Dependência map está correta
+  }, [map]); 
 
   return null;
 }
@@ -88,13 +88,23 @@ function MapUpdater({ properties }: { properties: Property[] }) {
   const hasInitialFocus = useRef(false);
   
   useEffect(() => {
+    // Only focus if we have properties and coordinates are valid
+    // Property interface expects coordinates as [number, number] if mapped correctly
     if (!hasInitialFocus.current && properties.length > 0) {
-      const bounds = L.latLngBounds(properties.map(p => p.coordinates));
-      map.fitBounds(bounds, { 
-        padding: [80, 80],
-        maxZoom: 15
-      });
-      hasInitialFocus.current = true;
+      const validCoords = properties
+        // @ts-ignore
+        .filter(p => p.coordinates && p.coordinates[0] && p.coordinates[1])
+        // @ts-ignore
+        .map(p => p.coordinates);
+
+      if (validCoords.length > 0) {
+        const bounds = L.latLngBounds(validCoords);
+        map.fitBounds(bounds, { 
+          padding: [80, 80],
+          maxZoom: 15
+        });
+        hasInitialFocus.current = true;
+      }
     }
   }, [properties, map]);
   
@@ -113,14 +123,34 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
 
   // Centro inicial (São Paulo)
   const defaultCenter: [number, number] = [-23.55052, -46.633308];
-  const initialCenter = properties.length > 0 ? properties[0].coordinates : defaultCenter;
+  
+  // Safe initial center
+  let initialCenter = defaultCenter;
+  if (properties.length > 0) {
+     // @ts-ignore
+     if (properties[0].coordinates) initialCenter = properties[0].coordinates;
+  }
+
+  // Helper para pegar a primeira imagem disponível do objeto JSON
+  const getFirstImage = (images: any) => {
+    if (!images || Object.keys(images).length === 0) return "/placeholder.svg";
+    
+    // Tenta pegar da Fachada primeiro
+    if (images["Fachada"] && images["Fachada"].length > 0) return images["Fachada"][0];
+    
+    // Senão pega a primeira de qualquer categoria
+    const firstKey = Object.keys(images)[0];
+    if (images[firstKey] && images[firstKey].length > 0) return images[firstKey][0];
+    
+    return "/placeholder.svg";
+  };
 
   return (
     <div className="h-full w-full relative z-0 group">
       <MapContainer
         center={initialCenter}
         zoom={13}
-        minZoom={13} // Travado ainda mais perto (Bairro)
+        minZoom={10} 
         maxZoom={18}
         scrollWheelZoom={true}
         className="h-full w-full"
@@ -133,7 +163,6 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
         
         <MapUpdater properties={properties} />
         
-        {/* Controlador de Eventos: Conecta o Mapa à Lista */}
         {onSearchArea && (
           <MapController onBoundsChange={onSearchArea} />
         )}
@@ -143,53 +172,63 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
           iconCreateFunction={createClusterCustomIcon}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={300} // Aumentado para 300px (Extremo)
+          maxClusterRadius={80} 
         >
-          {properties.map((property) => (
-            <Marker
-              key={property.id}
-              position={property.coordinates}
-              icon={createCustomIcon(hoveredPropertyId === property.id)}
-              zIndexOffset={hoveredPropertyId === property.id ? 1000 : 0}
-              eventHandlers={{
-                  click: () => {
-                    onMarkerClick?.(property.id);
-                  }
-              }}
-            >
-              <Popup className="custom-popup" closeButton={false} minWidth={280} maxWidth={280}>
-                 <div className="flex flex-col gap-2 p-1">
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-gray-100 mb-1">
-                      <img 
-                          src={property.images[0]} 
-                          alt={property.title} 
-                          className="w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-2 left-2 bg-white px-2 py-1 rounded-md text-[10px] font-bold">
-                          {property.area} m²
+          {properties.map((property) => {
+            // @ts-ignore - coordinates injectadas na query da page
+            const position = property.coordinates;
+            if (!position) return null;
+
+            const imageSrc = getFirstImage(property.images);
+            const totalPrice = property.total_price || (property.price + (property.condo_fee || 0));
+
+            return (
+              <Marker
+                key={property.id}
+                position={position}
+                icon={createCustomIcon(hoveredPropertyId === property.id)}
+                zIndexOffset={hoveredPropertyId === property.id ? 1000 : 0}
+                eventHandlers={{
+                    click: () => {
+                      onMarkerClick?.(property.id);
+                    }
+                }}
+              >
+                <Popup className="custom-popup" closeButton={false} minWidth={280} maxWidth={280}>
+                   <div className="flex flex-col gap-2 p-1">
+                      <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-gray-100 mb-1">
+                        <img 
+                            src={imageSrc} 
+                            alt={property.title} 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-white px-2 py-1 rounded-md text-[10px] font-bold">
+                            {property.area} m²
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-500 mb-0.5 font-normal line-clamp-1">{property.fullAddress}</p>
-                        <h3 className="text-sm font-bold text-[#1f2022] mb-0.5">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(property.totalPrice)}
-                          <span className="text-xs font-normal text-gray-500 ml-1">/mês</span>
-                        </h3>
-                        <p className="text-[11px] text-gray-500 mb-2">
-                          Aluguel {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(property.price)} + Cond. {property.condoFee}
-                        </p>
-                        <Button 
-                          size="sm" 
-                          className="w-full h-8 text-xs bg-[#3b44c6] hover:bg-[#2a308c]"
-                          onClick={() => navigate(`/imovel/${property.id}`)}
-                        >
-                          Ver detalhes <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                    </div>
-                 </div>
-              </Popup>
-            </Marker>
-          ))}
+                      <div>
+                          <p className="text-xs text-gray-500 mb-0.5 font-normal line-clamp-1">{property.address}, {property.neighborhood}</p>
+                          <h3 className="text-sm font-bold text-[#1f2022] mb-0.5">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalPrice)}
+                            <span className="text-xs font-normal text-gray-500 ml-1">/mês</span>
+                          </h3>
+                          <p className="text-[11px] text-gray-500 mb-2">
+                            {property.operation_type === 'rent' ? 'Aluguel' : 'Venda'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(property.price)} 
+                            {property.condo_fee > 0 && ` + Cond. ${property.condo_fee}`}
+                          </p>
+                          <Button 
+                            size="sm" 
+                            className="w-full h-8 text-xs bg-[#3b44c6] hover:bg-[#2a308c]"
+                            onClick={() => navigate(generatePropertyUrl(property))}
+                          >
+                            Ver detalhes <ChevronRight className="h-3 w-3 ml-1" />
+                          </Button>
+                      </div>
+                   </div>
+                </Popup>
+              </Marker>
+            );
+          })}
         </MarkerClusterGroup>
       </MapContainer>
     </div>

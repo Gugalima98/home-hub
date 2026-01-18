@@ -129,20 +129,13 @@ export default function AdminPropertyForm() {
         return;
       }
 
-      // Auto-fill form
       form.setValue("state", data.uf);
-      
-      // Pequeno delay para garantir que o estado atualizou e as cidades podem carregar
-      // Idealmente usaríamos useEffect, mas setar o valor diretamente funciona para o input
-      // O select de cidade vai popular via useEffect(selectedState)
-      // Precisamos garantir que o valor da cidade seja setado DEPOIS que as cidades carregarem ou
-      // o Select pode não reconhecer o valor inicial se a lista estiver vazia.
-      // Como o Select do shadcn aceita valor mesmo sem options (ele mostra o valor),
-      // podemos setar direto.
-      
       form.setValue("city", data.localidade); 
       form.setValue("neighborhood", data.bairro);
       form.setValue("address", data.logradouro);
+      
+      // Buscar Coordenadas Automaticamente
+      fetchCoordinates(`${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`);
       
       toast({ title: "Endereço encontrado!", description: "Os campos foram preenchidos automaticamente." });
 
@@ -154,6 +147,28 @@ export default function AdminPropertyForm() {
       });
     } finally {
       setCepLoading(false);
+    }
+  };
+
+  // Função para buscar coordenadas (Geocoding)
+  const fetchCoordinates = async (query: string) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        // @ts-ignore - Adicionando campos dinamicamente se não estiverem no tipo estrito, ou garantir que estão no PropertyFormValues
+        form.setValue("latitude", lat);
+        // @ts-ignore
+        form.setValue("longitude", lon);
+        console.log("Coordenadas encontradas:", lat, lon);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar coordenadas:", error);
     }
   };
 
@@ -812,6 +827,10 @@ export default function AdminPropertyForm() {
             </TabsContent>
 
           </Tabs>
+
+          {/* Hidden Fields for Coordinates */}
+          <FormField control={form.control} name="latitude" render={({ field }) => <input type="hidden" {...field} />} />
+          <FormField control={form.control} name="longitude" render={({ field }) => <input type="hidden" {...field} />} />
 
           <div className="flex justify-end gap-4 sticky bottom-0 bg-white p-4 border-t shadow-lg z-10">
             <Button type="button" variant="outline" onClick={() => navigate("/admin/properties")}>

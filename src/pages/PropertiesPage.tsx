@@ -17,6 +17,7 @@ import MapComponent from "@/components/Map";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 import { useFilters } from "@/contexts/FilterContext";
+import { generatePropertyUrl } from "@/lib/utils";
 
 // Neighborhoods data (Static for now)
 const neighborhoods = [
@@ -28,9 +29,9 @@ const neighborhoods = [
 ];
 
 const PropertiesPage = () => {
-  const { filters } = useFilters(); // Consumindo o contexto
+  const { filters } = useFilters();
   const [properties, setProperties] = useState<Property[]>([]);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]); // Usado para filtro local de mapa
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -45,13 +46,11 @@ const PropertiesPage = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      // Aplicar Filtros Dinâmicos
       if (filters.operationType) {
         query = query.eq("operation_type", filters.operationType);
       }
 
       if (filters.searchLocation) {
-        // Busca simples por texto em cidade ou bairro ou titulo
         query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
       }
 
@@ -76,12 +75,9 @@ const PropertiesPage = () => {
       }
 
       if (filters.propertyTypes.length > 0) {
-        // property_type in (Type A, Type B)
-        // Supabase usa sintaxe: .in('col', ['val1', 'val2'])
         query = query.in("property_type", filters.propertyTypes);
       }
 
-      // Booleanos (Ex: 'yes' -> true)
       if (filters.furnished === "yes") query = query.eq("furnished", true);
       if (filters.furnished === "no") query = query.eq("furnished", false);
 
@@ -91,9 +87,6 @@ const PropertiesPage = () => {
       if (filters.nearSubway === "yes") query = query.eq("near_subway", true);
       if (filters.nearSubway === "no") query = query.eq("near_subway", false);
 
-      // Amenities (Array contains)
-      // Se filters.amenities = ['Piscina', 'Academia'], precisamos que properties.condo_amenities contenha esses.
-      // O operador 'cs' (contains) do Postgres/Supabase serve para isso.
       if (filters.amenities.length > 0) {
         query = query.contains("condo_amenities", filters.amenities);
       }
@@ -114,14 +107,19 @@ const PropertiesPage = () => {
     };
 
     fetchProperties();
-  }, [filters]); // Re-executa sempre que 'filters' mudar
+  }, [filters]);
 
   const handlePropertyHover = (id: string | null) => {
     setHoveredPropertyId(id);
   };
 
+  // NAVEGAÇÃO ATUALIZADA AQUI
   const handlePropertyClick = (id: string) => {
-    navigate(`/imovel/${id}`);
+    const property = properties.find(p => p.id === id);
+    if (property) {
+      // @ts-ignore
+      navigate(generatePropertyUrl(property));
+    }
   };
 
   const handleMarkerClick = (id: string) => {
@@ -132,7 +130,6 @@ const PropertiesPage = () => {
     }
   };
 
-  // Filter properties based on map bounds (client-side filtering of the fetched list)
   const handleAreaSearch = (bounds: { north: number; south: number; east: number; west: number }) => {
     const visibleProperties = properties.filter(property => {
       // @ts-ignore
@@ -158,15 +155,12 @@ const PropertiesPage = () => {
       <Header variant="search" />
       <FilterBar />
 
-      {/* Main Content */}
       <div className="flex-1 flex relative">
-        {/* Property List */}
         <div
           className={`w-full lg:w-[60%] flex flex-col ${
             showMap ? "hidden lg:flex" : "flex"
           }`}
         >
-          {/* Results Count */}
           <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-[#1f2022]">
@@ -176,14 +170,12 @@ const PropertiesPage = () => {
                 à venda na área visível
               </p>
             </div>
-            {/* Sort Button Placeholder - match print style */}
              <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
                 Mais relevantes
                 <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
              </Button>
           </div>
 
-          {/* Property Grid */}
           <ScrollArea className="flex-1 bg-gray-50/50">
             <div className="p-4">
               
@@ -215,7 +207,6 @@ const PropertiesPage = () => {
                 </div>
               )}
 
-              {/* Neighborhoods Section */}
               <div className="mb-10">
                 <h2 className="text-lg font-bold text-[#1f2022] mb-4">
                   Bairros recomendados em São Paulo
@@ -243,7 +234,6 @@ const PropertiesPage = () => {
                   ))}
                 </div>
                 
-                {/* Navigation Buttons */}
                 <div className="flex justify-end gap-3 mt-4">
                   <button className="w-10 h-10 rounded-full bg-[#f5f5f7] flex items-center justify-center hover:bg-[#ebebeb] transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-50">
                      <ChevronRight className="h-5 w-5 rotate-180" />
@@ -254,16 +244,13 @@ const PropertiesPage = () => {
                 </div>
               </div>
 
-              {/* Load more */}
               <div className="w-full mb-16">
                 <Button variant="default" className="w-full rounded-md h-12 bg-[#3b44c6] hover:bg-[#2a308c] font-bold text-base">
                   Ver mais
                 </Button>
               </div>
 
-              {/* SEO Links Sections */}
               <div className="space-y-12 mb-16">
-                {/* Neighborhood Links */}
                 <div>
                   <h3 className="text-lg font-bold text-[#1f2022] mb-6">
                     Procure pelos principais bairros em São Paulo
@@ -281,7 +268,6 @@ const PropertiesPage = () => {
                   </div>
                 </div>
 
-                {/* City Links */}
                 <div>
                   <h3 className="text-lg font-bold text-[#1f2022] mb-6">
                     Amplie as chances de encontrar o lar ideal nas principais cidades
@@ -300,7 +286,6 @@ const PropertiesPage = () => {
                 </div>
               </div>
 
-              {/* FAQ Section */}
               <div className="flex flex-col md:flex-row gap-8 pb-16">
                 <div className="w-full md:w-1/3">
                   <h3 className="text-xl font-bold text-[#1f2022] leading-tight">
@@ -341,15 +326,11 @@ const PropertiesPage = () => {
           </ScrollArea>
         </div>
 
-        {/* Map */}
         <div
           className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
             showMap ? "block" : "hidden lg:block"
           }`}
         >
-          {/* Note: MapComponent still expects strict mock interface, but we are passing our extended Property.
-              Depending on MapComponent implementation, it might ignore extra fields or need adjustment.
-              Assuming basic coordinate structure matches. */}
            <MapComponent 
             // @ts-ignore
             properties={filteredProperties} 
@@ -359,7 +340,6 @@ const PropertiesPage = () => {
            />
         </div>
 
-        {/* Mobile Map Toggle Button */}
         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
           <Button
             onClick={() => setShowMap(!showMap)}
