@@ -1,6 +1,7 @@
-import { ChevronDown, User } from "lucide-react";
+import { ChevronDown, User, LayoutDashboard, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,10 +20,27 @@ const navItems = [
 ];
 
 interface HeaderProps {
-  variant?: "default" | "search";
+  variant?: "default" | "search" | "simple";
 }
 
 const Header = ({ variant = "default" }: HeaderProps) => {
+  const { user } = useAuth();
+
+  if (variant === "simple") {
+    return (
+      <header className="sticky top-0 z-50 w-full bg-background border-b border-gray-200 shadow-sm">
+        <div className="w-full max-w-[1728px] mx-auto flex items-center justify-center px-4 py-5">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
+              <span className="text-sm font-bold text-primary-foreground">R7</span>
+            </div>
+            <span className="text-lg font-bold text-foreground">R7 Consultoria</span>
+          </Link>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b border-gray-200 shadow-sm">
       <div className="w-full max-w-[1728px] mx-auto flex items-center justify-between px-20 py-5">
@@ -64,14 +82,28 @@ const Header = ({ variant = "default" }: HeaderProps) => {
             )}
           </nav>
 
-          {/* Login Button */}
-          <Button
-            size="sm"
-            className="rounded-full gap-2 h-9 px-4 bg-gray-100 hover:bg-gray-200 text-foreground shadow-sm"
-          >
-            <User className="h-4 w-4" />
-            Entrar
-          </Button>
+          {/* Login Button or Dashboard Link */}
+          {user ? (
+            <Link to="/dashboard">
+              <Button
+                size="sm"
+                className="rounded-full gap-2 h-9 px-4 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Meu Painel
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/login">
+              <Button
+                size="sm"
+                className="rounded-full gap-2 h-9 px-4 bg-gray-100 hover:bg-gray-200 text-foreground shadow-sm"
+              >
+                <User className="h-4 w-4" />
+                Entrar
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>

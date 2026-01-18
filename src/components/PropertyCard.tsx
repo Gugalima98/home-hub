@@ -1,8 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Heart, ChevronLeft, ChevronRight, Bed, Car, Maximize } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import type { Property } from "@/data/mock-data";
+
+// Interface compatível com o Supabase
+export interface Property {
+  id: string;
+  title: string;
+  description?: string;
+  address: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  price: number;
+  condo_fee: number;
+  total_price: number; // Campo gerado no banco ou calculado
+  area: number;
+  bedrooms: number;
+  parking_spots: number;
+  images: Record<string, string[]>; // JSONB { "Sala": ["url"], ... }
+  badges: string[];
+  is_favorite: boolean;
+  operation_type: string;
+}
 
 interface PropertyCardProps {
   property: Property;
@@ -14,7 +34,34 @@ interface PropertyCardProps {
 
 const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "grid" }: PropertyCardProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(property.isFavorite);
+  const [isFavorite, setIsFavorite] = useState(property.is_favorite);
+
+  // Flatten images for the carousel
+  const imageList = useMemo(() => {
+    if (!property.images || Object.keys(property.images).length === 0) {
+      return ["/placeholder.svg"]; // Fallback image
+    }
+    // Extrai todas as URLs de todas as categorias em um único array
+    // Prioriza categorias principais se quiser ordenar (ex: Fachada primeiro)
+    const allImages: string[] = [];
+    const categories = ["Fachada", "Sala", "Cozinha", "Quartos", "Banheiros", "Varanda", "Garagem", "Quintal", "Vista", "Área de Serviço", "Planta", "Outros"];
+    
+    // Adiciona na ordem de prioridade
+    categories.forEach(cat => {
+      if (property.images[cat]) {
+        allImages.push(...property.images[cat]);
+      }
+    });
+
+    // Se tiver categorias fora da lista padrão, adiciona no final
+    Object.keys(property.images).forEach(cat => {
+      if (!categories.includes(cat)) {
+        allImages.push(...(property.images[cat] || []));
+      }
+    });
+
+    return allImages.length > 0 ? allImages : ["/placeholder.svg"];
+  }, [property.images]);
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -26,17 +73,18 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+    setCurrentImageIndex((prev) => (prev + 1) % imageList.length);
   };
 
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+    setCurrentImageIndex((prev) => (prev - 1 + imageList.length) % imageList.length);
   };
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsFavorite(!isFavorite);
+    // TODO: Persist to database
   };
 
   const getBadgeLabel = (badge: string) => {
@@ -51,6 +99,9 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
         return badge;
     }
   };
+
+  // Preço total pode vir do banco ou ser calculado se faltar
+  const totalPrice = property.total_price || (property.price + (property.condo_fee || 0));
 
   if (variant === "horizontal") {
     return (
@@ -69,7 +120,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
             <AnimatePresence mode="wait">
               <motion.img
                 key={currentImageIndex}
-                src={property.images[currentImageIndex]}
+                src={imageList[currentImageIndex]}
                 alt={property.title}
                 className="w-full h-full object-cover"
                 initial={{ opacity: 0 }}
@@ -80,7 +131,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
             </AnimatePresence>
 
             {/* Carousel Controls */}
-            {property.images.length > 1 && (
+            {imageList.length > 1 && (
               <>
                 <button
                   onClick={prevImage}
@@ -98,7 +149,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
             )}
 
             {/* Badges */}
-            {property.badges.length > 0 && (
+            {property.badges && property.badges.length > 0 && (
               <div className="absolute top-2 left-2 flex gap-1">
                 {property.badges.slice(0, 1).map((badge) => (
                   <Badge
@@ -119,10 +170,10 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-lg font-bold text-foreground">
-                    {formatPrice(property.totalPrice)}
+                    {formatPrice(totalPrice)}
                   </span>
                   <p className="text-xs text-muted-foreground">
-                    {formatPrice(property.price)} + Cond. {formatPrice(property.condoFee)}
+                    {formatPrice(property.price)} + Cond. {formatPrice(property.condo_fee || 0)}
                   </p>
                 </div>
                 <button
@@ -148,10 +199,10 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
                   <Bed className="h-3 w-3" />
                   {property.bedrooms} quartos
                 </span>
-                {property.parkingSpots > 0 && (
+                {property.parking_spots > 0 && (
                   <span className="flex items-center gap-1">
                     <Car className="h-3 w-3" />
-                    {property.parkingSpots} vaga
+                    {property.parking_spots} vaga
                   </span>
                 )}
               </div>
@@ -179,7 +230,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
-            src={property.images[currentImageIndex]}
+            src={imageList[currentImageIndex]}
             alt={property.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             initial={{ opacity: 0 }}
@@ -190,7 +241,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
         </AnimatePresence>
 
         {/* Carousel Controls - Visible on Hover */}
-        {property.images.length > 1 && (
+        {imageList.length > 1 && (
           <>
             <button
               onClick={prevImage}
@@ -207,7 +258,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
 
             {/* Image Indicators */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              {property.images.map((_, index) => (
+              {imageList.slice(0, 5).map((_, index) => (
                 <div
                   key={index}
                   className={`w-1.5 h-1.5 rounded-full shadow-sm transition-all ${
@@ -232,7 +283,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
         </button>
 
         {/* Badges */}
-        {property.badges.length > 0 && (
+        {property.badges && property.badges.length > 0 && (
           <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap z-10">
             {property.badges.map((badge) => (
               <Badge
@@ -257,13 +308,13 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
         {/* Price */}
         <div className="flex items-baseline">
           <span className="text-lg font-bold text-[#1f2022]">
-            {formatPrice(property.totalPrice)}
+            {formatPrice(totalPrice)}
           </span>
         </div>
 
         {/* Price Breakdown */}
         <p className="text-[11px] text-gray-500 mb-1.5">
-          {formatPrice(property.price)} + Cond. {formatPrice(property.condoFee)}
+          {formatPrice(property.price)} + Cond. {formatPrice(property.condo_fee || 0)}
         </p>
 
         {/* Features */}
@@ -272,12 +323,12 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
           <span className="text-gray-300">•</span>
           <span>{property.bedrooms} {property.bedrooms === 1 ? 'quarto' : 'quartos'}</span>
           <span className="text-gray-300">•</span>
-          <span>{property.parkingSpots} {property.parkingSpots === 1 ? 'vaga' : 'vagas'}</span>
+          <span>{property.parking_spots} {property.parking_spots === 1 ? 'vaga' : 'vagas'}</span>
         </div>
 
         {/* Address */}
         <p className="text-[11px] text-gray-500 line-clamp-1 font-normal">
-          {property.fullAddress}
+          {property.address} · {property.neighborhood}
         </p>
       </div>
     </motion.div>

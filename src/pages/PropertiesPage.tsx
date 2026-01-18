@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Map, List, Search, ChevronRight } from "lucide-react";
+import { Map, List, Search, ChevronRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +12,13 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FilterBar from "@/components/FilterBar";
-import PropertyCard from "@/components/PropertyCard";
+import PropertyCard, { Property } from "@/components/PropertyCard";
 import MapComponent from "@/components/Map";
-import { mockProperties } from "@/data/mock-data";
 import { SEO } from "@/components/SEO";
+import { supabase } from "@/lib/supabase";
+import { useFilters } from "@/contexts/FilterContext";
 
-// Neighborhoods data
+// Neighborhoods data (Static for now)
 const neighborhoods = [
   { name: "Mooca", count: "3.798", type: "apartamentos" },
   { name: "Tatuapé", count: "3.654", type: "apartamentos" },
@@ -26,106 +27,94 @@ const neighborhoods = [
   { name: "Paraíso", count: "1.974", type: "apartamentos" },
 ];
 
-// Placeholder map component
-const MapPlaceholder = ({ 
-  properties, 
-  hoveredPropertyId 
-}: { 
-  properties: typeof mockProperties; 
-  hoveredPropertyId: string | null;
-}) => {
-  const formatPrice = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  return (
-    <div className="h-full w-full bg-[#e5e3df] relative overflow-hidden">
-      {/* Simulated map background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#e8e6e2] to-[#d9d7d3]">
-        {/* Grid lines to simulate streets */}
-        <svg className="absolute inset-0 w-full h-full opacity-30">
-          <defs>
-            <pattern id="streets" width="100" height="100" patternUnits="userSpaceOnUse">
-              <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#ccc" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#streets)" />
-        </svg>
-        
-        {/* Main roads */}
-        <div className="absolute top-1/4 left-0 right-0 h-1 bg-white/60" />
-        <div className="absolute top-1/2 left-0 right-0 h-2 bg-[#f5deb3]/60" />
-        <div className="absolute left-1/3 top-0 bottom-0 w-1 bg-white/60" />
-        <div className="absolute left-2/3 top-0 bottom-0 w-2 bg-[#f5deb3]/60" />
-      </div>
-      
-      {/* Property markers */}
-      <div className="absolute inset-4">
-        {properties.slice(0, 8).map((property, index) => {
-          const isHighlighted = hoveredPropertyId === property.id;
-          const positions = [
-            { top: "15%", left: "20%" },
-            { top: "25%", left: "55%" },
-            { top: "35%", left: "75%" },
-            { top: "45%", left: "30%" },
-            { top: "55%", left: "60%" },
-            { top: "65%", left: "15%" },
-            { top: "70%", left: "45%" },
-            { top: "80%", left: "70%" },
-          ];
-          
-          return (
-            <div
-              key={property.id}
-              className={`absolute transition-all duration-200 cursor-pointer ${
-                isHighlighted ? "z-20 scale-110" : "z-10"
-              }`}
-              style={positions[index]}
-            >
-              <div
-                className={`px-2 py-1 rounded-md text-xs font-bold shadow-md border transition-all ${
-                  isHighlighted
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                }`}
-              >
-                {formatPrice(property.totalPrice)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      
-      {/* Map controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-1">
-        <button className="w-8 h-8 bg-background rounded shadow-sm flex items-center justify-center text-foreground hover:bg-muted text-lg font-light">
-          +
-        </button>
-        <button className="w-8 h-8 bg-background rounded shadow-sm flex items-center justify-center text-foreground hover:bg-muted text-lg font-light">
-          −
-        </button>
-      </div>
-      
-      {/* Search in area button */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-        <Button className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-sm h-9">
-          <Search className="h-4 w-4 mr-2" />
-          Buscar nesta área
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 const PropertiesPage = () => {
-  const [filteredProperties, setFilteredProperties] = useState(mockProperties);
+  const { filters } = useFilters(); // Consumindo o contexto
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]); // Usado para filtro local de mapa
+  const [loading, setLoading] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setLoading(true);
+      
+      let query = supabase
+        .from("properties")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      // Aplicar Filtros Dinâmicos
+      if (filters.operationType) {
+        query = query.eq("operation_type", filters.operationType);
+      }
+
+      if (filters.searchLocation) {
+        // Busca simples por texto em cidade ou bairro ou titulo
+        query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
+      }
+
+      if (filters.priceMin) {
+        query = query.gte("price", filters.priceMin);
+      }
+
+      if (filters.priceMax) {
+        query = query.lte("price", filters.priceMax);
+      }
+
+      if (filters.bedrooms) {
+        query = query.gte("bedrooms", filters.bedrooms);
+      }
+
+      if (filters.bathrooms) {
+        query = query.gte("bathrooms", filters.bathrooms);
+      }
+
+      if (filters.parkingSpots) {
+        query = query.gte("parking_spots", filters.parkingSpots);
+      }
+
+      if (filters.propertyTypes.length > 0) {
+        // property_type in (Type A, Type B)
+        // Supabase usa sintaxe: .in('col', ['val1', 'val2'])
+        query = query.in("property_type", filters.propertyTypes);
+      }
+
+      // Booleanos (Ex: 'yes' -> true)
+      if (filters.furnished === "yes") query = query.eq("furnished", true);
+      if (filters.furnished === "no") query = query.eq("furnished", false);
+
+      if (filters.petFriendly === "yes") query = query.eq("pet_friendly", true);
+      if (filters.petFriendly === "no") query = query.eq("pet_friendly", false);
+
+      if (filters.nearSubway === "yes") query = query.eq("near_subway", true);
+      if (filters.nearSubway === "no") query = query.eq("near_subway", false);
+
+      // Amenities (Array contains)
+      // Se filters.amenities = ['Piscina', 'Academia'], precisamos que properties.condo_amenities contenha esses.
+      // O operador 'cs' (contains) do Postgres/Supabase serve para isso.
+      if (filters.amenities.length > 0) {
+        query = query.contains("condo_amenities", filters.amenities);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching properties:", error);
+      } else {
+        const mappedProperties: Property[] = (data || []).map((p) => ({
+          ...p,
+          coordinates: [p.latitude || -23.5505, p.longitude || -46.6333],
+        }));
+        setProperties(mappedProperties);
+        setFilteredProperties(mappedProperties);
+      }
+      setLoading(false);
+    };
+
+    fetchProperties();
+  }, [filters]); // Re-executa sempre que 'filters' mudar
 
   const handlePropertyHover = (id: string | null) => {
     setHoveredPropertyId(id);
@@ -143,10 +132,12 @@ const PropertiesPage = () => {
     }
   };
 
-  // Filter properties based on map bounds
+  // Filter properties based on map bounds (client-side filtering of the fetched list)
   const handleAreaSearch = (bounds: { north: number; south: number; east: number; west: number }) => {
-    const visibleProperties = mockProperties.filter(property => {
+    const visibleProperties = properties.filter(property => {
+      // @ts-ignore
       const lat = property.coordinates[0];
+       // @ts-ignore
       const lng = property.coordinates[1];
       
       const isInsideLat = lat <= bounds.north && lat >= bounds.south;
@@ -195,27 +186,34 @@ const PropertiesPage = () => {
           {/* Property Grid */}
           <ScrollArea className="flex-1 bg-gray-50/50">
             <div className="p-4">
-              {/* Property Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-8">
-                {filteredProperties.length > 0 ? (
-                  filteredProperties.map((property) => (
-                    <div key={property.id} id={`property-${property.id}`}>
-                      <PropertyCard
-                        property={property}
-                        isHighlighted={hoveredPropertyId === property.id}
-                        onHover={handlePropertyHover}
-                        onClick={handlePropertyClick}
-                        variant="grid"
-                      />
+              
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+                  <p className="text-gray-500">Carregando imóveis...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-10 mb-8">
+                  {filteredProperties.length > 0 ? (
+                    filteredProperties.map((property) => (
+                      <div key={property.id} id={`property-${property.id}`}>
+                        <PropertyCard
+                          property={property}
+                          isHighlighted={hoveredPropertyId === property.id}
+                          onHover={handlePropertyHover}
+                          onClick={handlePropertyClick}
+                          variant="grid"
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-12 text-center text-gray-500">
+                      <p className="text-lg font-semibold">Nenhum imóvel encontrado.</p>
+                      <p className="text-sm">Tente ajustar os filtros ou o mapa.</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="col-span-full py-12 text-center text-gray-500">
-                    <p className="text-lg font-semibold">Nenhum imóvel encontrado nesta área.</p>
-                    <p className="text-sm">Mova o mapa para ver mais opções.</p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {/* Neighborhoods Section */}
               <div className="mb-10">
@@ -255,8 +253,6 @@ const PropertiesPage = () => {
                   </button>
                 </div>
               </div>
-
-              {/* More Properties (Unified Grid removed as filtered list is dynamic) */}
 
               {/* Load more */}
               <div className="w-full mb-16">
@@ -351,8 +347,12 @@ const PropertiesPage = () => {
             showMap ? "block" : "hidden lg:block"
           }`}
         >
+          {/* Note: MapComponent still expects strict mock interface, but we are passing our extended Property.
+              Depending on MapComponent implementation, it might ignore extra fields or need adjustment.
+              Assuming basic coordinate structure matches. */}
            <MapComponent 
-            properties={mockProperties} 
+            // @ts-ignore
+            properties={filteredProperties} 
             hoveredPropertyId={hoveredPropertyId} 
             onMarkerClick={handleMarkerClick}
             onSearchArea={handleAreaSearch}

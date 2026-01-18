@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -13,31 +13,81 @@ import {
   Dog, 
   Sofa,
   Check,
-  X as XIcon,
   ChevronLeft,
   ChevronRight,
   Camera,
-  Play,
   Map as MapIcon,
-  Image as ImageIcon
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PropertyCard from "@/components/PropertyCard";
-import { mockProperties } from "@/data/mock-data";
+import PropertyCard, { Property } from "@/components/PropertyCard";
 import { SEO } from "@/components/SEO";
+import { supabase } from "@/lib/supabase";
 
 const PropertyDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  const property = mockProperties.find((p) => p.id === id);
-  const similarProperties = mockProperties.filter((p) => p.id !== id).slice(0, 4);
+  // Fetch Property
+  useEffect(() => {
+    const fetchProperty = async () => {
+      if (!id) return;
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching property:", error);
+      } else {
+        setProperty(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProperty();
+  }, [id]);
+
+  // Flatten Images Helper
+  const imageList = useMemo(() => {
+    if (!property?.images) return ["/placeholder.svg"];
+    const allImages: string[] = [];
+    // Ordem de prioridade
+    const categories = ["Fachada", "Sala", "Cozinha", "Quartos", "Banheiros", "Varanda", "Garagem", "Quintal", "Vista", "Área de Serviço", "Planta", "Outros"];
+    
+    categories.forEach(cat => {
+      if (property.images[cat]) {
+        allImages.push(...property.images[cat]);
+      }
+    });
+    
+    // Add remaining
+    Object.keys(property.images).forEach(cat => {
+      if (!categories.includes(cat)) {
+        allImages.push(...(property.images[cat] || []));
+      }
+    });
+
+    return allImages.length > 0 ? allImages : ["/placeholder.svg"];
+  }, [property]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!property) {
     return (
@@ -59,10 +109,15 @@ const PropertyDetailPage = () => {
     }).format(value);
   };
 
-  const totalMonthly = property.price + property.condoFee + property.iptu + property.fireInsurance + property.serviceFee;
+  const totalMonthly = (property.total_price) || (property.price + (property.condo_fee || 0) + (property.iptu || 0) + (property.fire_insurance || 0) + (property.service_fee || 0));
 
-  const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
-  const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+  const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % imageList.length);
+  const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + imageList.length) % imageList.length);
+
+  // Arrays from DB (might be null initially)
+  const availableItems = property.available_items || [];
+  const unavailableItems = property.unavailable_items || [];
+  const condoAmenities = property.condo_amenities || [];
 
   // Full screen gallery modal
   if (showAllPhotos) {
@@ -74,14 +129,14 @@ const PropertyDetailPage = () => {
             <ArrowLeft className="h-5 w-5" />
             Voltar
           </button>
-          <span className="text-sm">{currentImageIndex + 1} / {property.images.length}</span>
+          <span className="text-sm">{currentImageIndex + 1} / {imageList.length}</span>
         </div>
         <div className="flex-1 flex items-center justify-center relative">
           <button onClick={prevImage} className="absolute left-4 p-2 bg-white/20 rounded-full hover:bg-white/30">
             <ChevronLeft className="h-6 w-6 text-white" />
           </button>
           <img
-            src={property.images[currentImageIndex]}
+            src={imageList[currentImageIndex]}
             alt={`Foto ${currentImageIndex + 1}`}
             className="max-h-full max-w-full object-contain"
           />
@@ -90,7 +145,7 @@ const PropertyDetailPage = () => {
           </button>
         </div>
         <div className="p-4 flex gap-2 overflow-x-auto">
-          {property.images.map((img, index) => (
+          {imageList.map((img, index) => (
             <button
               key={index}
               onClick={() => setCurrentImageIndex(index)}
@@ -108,27 +163,27 @@ const PropertyDetailPage = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <SEO 
         title={property.title} 
-        description={`${property.description.substring(0, 150)}...`}
-        image={property.images[0]}
+        description={property.description ? `${property.description.substring(0, 150)}...` : property.title}
+        image={imageList[0]}
       />
       <Header />
 
-      {/* Hero Gallery Section - New 3-Column Layout */}
+      {/* Hero Gallery Section */}
       <div className="bg-white border-b border-gray-100">
         <div className="h-[550px] lg:h-[600px] flex flex-col lg:flex-row gap-6 bg-white overflow-hidden">
           
-          {/* Column 1: Info (Left) - Fixed 36% width */}
+          {/* Column 1: Info (Left) */}
           <div className="lg:w-[36%] shrink-0 bg-[#f8f9fa] p-6 lg:p-8 flex flex-col justify-between overflow-y-auto relative z-10">
             <div>
               <h1 className="text-3xl lg:text-[2.5rem] font-bold text-[#1f2022] leading-tight mb-8">
-                Apartamento para alugar com {property.area}m², {property.bedrooms} quartos e {property.parkingSpots} vagas
+                {property.property_type} para {property.operation_type === 'rent' ? 'alugar' : 'comprar'} com {property.area}m², {property.bedrooms} quartos
               </h1>
             </div>
 
             <div className="space-y-8 mb-4">
               <div>
                 <p className="text-3xl font-bold text-[#1f2022] mb-1">
-                  Aluguel {formatPrice(property.price)}
+                  {property.operation_type === 'rent' ? 'Aluguel' : 'Venda'} {formatPrice(property.price)}
                 </p>
                 <p className="text-lg text-gray-500 font-medium">
                   Total {formatPrice(totalMonthly)}
@@ -146,15 +201,14 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Column 2: Image 1 (Center) */}
+          {/* Column 2: Image 1 */}
           <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
             <img
-              src={property.images[0]}
+              src={imageList[0]}
               alt="Foto Principal"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             
-            {/* Floating Actions (Top Left) */}
             <div className="absolute top-6 left-6 flex gap-3">
               <button className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors">
                 <Share2 className="h-5 w-5 text-gray-700" />
@@ -167,7 +221,6 @@ const PropertyDetailPage = () => {
               </button>
             </div>
 
-            {/* Floating Actions (Bottom) */}
             <div className="absolute bottom-6 left-6 flex gap-3">
               <Button 
                 variant="secondary" 
@@ -175,7 +228,7 @@ const PropertyDetailPage = () => {
                 onClick={() => setShowAllPhotos(true)}
               >
                 <Camera className="h-4 w-4" />
-                {property.images.length} Fotos
+                {imageList.length} Fotos
               </Button>
               <Button 
                 variant="secondary" 
@@ -187,15 +240,14 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Column 3: Image 2 (Right) */}
+          {/* Column 3: Image 2 */}
           <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
             <img
-              src={property.images[1] || property.images[0]}
+              src={imageList[1] || imageList[0]}
               alt="Foto Secundária"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
 
-            {/* Navigation Arrows (Bottom Right) */}
             <div className="absolute bottom-6 right-6 flex gap-3">
               <button 
                 onClick={prevImage}
@@ -212,24 +264,21 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          {/* Mobile Gallery (Carousel style) replaces col 2 & 3 on small screens */}
+          {/* Mobile Gallery */}
           <div className="lg:hidden relative h-[300px] w-full bg-gray-100">
              <img
-              src={property.images[currentImageIndex]}
+              src={imageList[currentImageIndex]}
               alt={property.title}
               className="w-full h-full object-cover"
             />
-            
-            {/* Mobile Nav */}
             <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 rounded-full text-white">
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/30 rounded-full text-white">
               <ChevronRight className="h-6 w-6" />
             </button>
-
             <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs">
-              {currentImageIndex + 1}/{property.images.length}
+              {currentImageIndex + 1}/{imageList.length}
             </div>
           </div>
 
@@ -249,25 +298,22 @@ const PropertyDetailPage = () => {
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-6 font-normal overflow-x-auto whitespace-nowrap">
                 <Link to="/" className="hover:underline">Início</Link>
                 <ChevronRight className="h-3 w-3" />
-                <Link to="/imoveis" className="hover:underline">São Paulo</Link>
+                <Link to="/imoveis" className="hover:underline">{property.city}</Link>
                 <ChevronRight className="h-3 w-3" />
                 <Link to="/imoveis" className="hover:underline">{property.neighborhood}</Link>
                 <ChevronRight className="h-3 w-3" />
                 <span>{property.address}</span>
-                <ChevronRight className="h-3 w-3" />
-                <span>Imóvel {property.id}</span>
               </div>
 
               {/* Map Banner Card */}
               <div className="relative h-24 bg-gray-100 rounded-xl overflow-hidden mb-8 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group">
-                {/* Fake Map Background Pattern */}
                 <div className="absolute inset-0 opacity-20 bg-[url('https://maps.wikimedia.org/img/osm-intl,13,a,a,270x100.png')] bg-cover bg-center" />
                 <div className="absolute inset-0 bg-white/60" />
                 
                 <div className="relative h-full flex items-center justify-between px-6 z-10">
                   <div>
                     <h2 className="text-lg font-bold text-[#1f2022]">{property.address}</h2>
-                    <p className="text-sm text-gray-600">{property.neighborhood}, São Paulo</p>
+                    <p className="text-sm text-gray-600">{property.neighborhood}, {property.city}</p>
                   </div>
                   <ChevronRight className="h-6 w-6 text-[#1f2022] group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -283,7 +329,7 @@ const PropertyDetailPage = () => {
                   <Bed className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
                   <div className="flex flex-col">
                     <span className="text-sm text-[#1f2022]">{property.bedrooms} quartos</span>
-                    <span className="text-xs text-gray-500">(1 suíte)</span>
+                    {property.suites > 0 && <span className="text-xs text-gray-500">({property.suites} suíte)</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -292,39 +338,23 @@ const PropertyDetailPage = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <Car className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
-                  <span className="text-sm text-[#1f2022]">{property.parkingSpots} vaga</span>
+                  <span className="text-sm text-[#1f2022]">{property.parking_spots} vaga</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Building className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
-                  <span className="text-sm text-[#1f2022]">Até 3º andar</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Dog className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
-                  <span className="text-sm text-[#1f2022]">{property.petFriendly ? 'Aceita pet' : 'Não aceita pet'}</span>
-                </div>
+                {/* Outros ícones condicionais */}
                 <div className="flex items-center gap-3">
                   <Sofa className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
                   <span className="text-sm text-[#1f2022]">{property.furnished ? 'Mobiliado' : 'Sem mobília'}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
-                  <span className="text-sm text-[#1f2022]">Não próx. metrô</span>
+                 <div className="flex items-center gap-3">
+                  <Dog className="h-6 w-6 text-[#1f2022] stroke-[1.5]" />
+                  <span className="text-sm text-[#1f2022]">{property.pet_friendly ? 'Aceita pet' : 'Não aceita pet'}</span>
                 </div>
-              </div>
-
-              {/* Tags */}
-              <div className="flex gap-3 mb-8">
-                <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">Imóvel {property.id}</span>
-                <span className="flex items-center gap-1 text-gray-500 text-xs">
-                  <div className="w-3 h-3 rounded-full border border-gray-400 flex items-center justify-center text-[8px]">L</div>
-                  Publicado há 3 dias
-                </span>
               </div>
 
               {/* Description */}
               <div className="mb-10">
                 <p className={`text-gray-700 leading-relaxed text-[15px] ${!showFullDescription ? 'line-clamp-3' : ''}`}>
-                  {property.description} Imóvel aconchegante para alugar com {property.bedrooms} quartos e {property.bathrooms} banheiros no total. Este imóvel está bem equipado. O condomínio é bem equipado com diversas instalações e fica localizado em {property.address} no bairro {property.neighborhood} em São Paulo.
+                  {property.description}
                 </p>
                 <button 
                   onClick={() => setShowFullDescription(!showFullDescription)}
@@ -338,12 +368,12 @@ const PropertyDetailPage = () => {
               {/* Amenities Grid */}
               <div className="mb-8">
                 <div className="grid md:grid-cols-2 gap-12">
-                  {/* Available */}
+                  {/* Available (Combine Amenities + Available Items) */}
                   <div>
-                    <h3 className="text-lg font-bold text-[#1f2022] mb-4">Itens disponíveis</h3>
+                    <h3 className="text-lg font-bold text-[#1f2022] mb-4">Comodidades</h3>
                     <div className="space-y-3">
-                      {property.availableItems.map((item) => (
-                        <div key={item} className="flex items-start gap-3">
+                      {[...availableItems, ...condoAmenities].map((item, i) => (
+                        <div key={i} className="flex items-start gap-3">
                           <Check className="h-5 w-5 text-[#1f2022] shrink-0 mt-0.5" />
                           <span className="text-sm text-[#1f2022]">{item}</span>
                         </div>
@@ -351,49 +381,26 @@ const PropertyDetailPage = () => {
                     </div>
                   </div>
                   {/* Unavailable */}
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-400 mb-4">Itens indisponíveis</h3>
-                    <div className="space-y-3">
-                      {property.unavailableItems.slice(0, 8).map((item) => (
-                        <div key={item} className="flex items-start gap-3">
-                          <div className="relative w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">
-                             <div className="w-4 h-4 rounded-full border border-gray-300" />
-                             <div className="absolute w-[1px] h-5 bg-gray-300 rotate-45" />
-                          </div>
-                          <span className="text-sm text-gray-400 line-through decoration-gray-300">{item}</span>
+                  {unavailableItems.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-400 mb-4">Itens indisponíveis</h3>
+                        <div className="space-y-3">
+                        {unavailableItems.slice(0, 8).map((item: string) => (
+                            <div key={item} className="flex items-start gap-3">
+                            <div className="relative w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">
+                                <div className="w-4 h-4 rounded-full border border-gray-300" />
+                                <div className="absolute w-[1px] h-5 bg-gray-300 rotate-45" />
+                            </div>
+                            <span className="text-sm text-gray-400 line-through decoration-gray-300">{item}</span>
+                            </div>
+                        ))}
                         </div>
-                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Similar Properties in Left Column */}
-              <div className="mt-16 border-t pt-10">
-                <h2 className="text-xl font-bold text-[#1f2022] mb-6">Similares na mesma região</h2>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {similarProperties.slice(0, 3).map((prop) => (
-                    <div key={prop.id} className="w-full">
-                       <PropertyCard
-                        property={prop}
-                        onClick={() => navigate(`/imovel/${prop.id}`)}
-                        variant="grid"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Navigation Buttons (Bottom Right) */}
-                <div className="flex justify-end gap-3">
-                   <button className="w-12 h-12 rounded-full bg-[#f3f5f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
-                      <ChevronLeft className="h-6 w-6 text-gray-400" />
-                   </button>
-                   <button className="w-12 h-12 rounded-full bg-[#f3f5f6] hover:bg-[#e5e7eb] flex items-center justify-center transition-colors">
-                      <ChevronRight className="h-6 w-6 text-[#1f2022]" />
-                   </button>
-                </div>
-              </div>
+              {/* (Opcional) Similar properties section could also be fetched from Supabase here */}
 
             </div>
 
@@ -404,33 +411,27 @@ const PropertyDetailPage = () => {
                     {/* Cost breakdown */}
                     <div className="space-y-3 text-sm mb-6">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Aluguel</span>
+                        <span className="text-gray-600">{property.operation_type === 'rent' ? 'Aluguel' : 'Valor'}</span>
                         <span className="text-gray-600">{formatPrice(property.price)}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 flex items-center gap-1">
-                          Condomínio <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-gray-400 text-[9px] flex items-center justify-center">i</span>
-                        </span>
-                        <span className="text-gray-600">{formatPrice(property.condoFee)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 flex items-center gap-1">
-                          IPTU <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-gray-400 text-[9px] flex items-center justify-center">i</span>
-                        </span>
-                        <span className="text-gray-600">{formatPrice(property.iptu)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 flex items-center gap-1">
-                          Seguro incêndio <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-gray-400 text-[9px] flex items-center justify-center">i</span>
-                        </span>
-                        <span className="text-gray-600">{formatPrice(property.fireInsurance)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 flex items-center gap-1">
-                          Taxa de serviço <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-gray-400 text-[9px] flex items-center justify-center">i</span>
-                        </span>
-                        <span className="text-gray-600">{formatPrice(property.serviceFee)}</span>
-                      </div>
+                      {property.condo_fee > 0 && (
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-600 flex items-center gap-1">Condomínio</span>
+                            <span className="text-gray-600">{formatPrice(property.condo_fee)}</span>
+                        </div>
+                      )}
+                      {property.iptu > 0 && (
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-600 flex items-center gap-1">IPTU</span>
+                            <span className="text-gray-600">{formatPrice(property.iptu)}</span>
+                        </div>
+                      )}
+                       {property.fire_insurance > 0 && (
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-600 flex items-center gap-1">Seguro Incêndio</span>
+                            <span className="text-gray-600">{formatPrice(property.fire_insurance)}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Total */}
@@ -439,28 +440,13 @@ const PropertyDetailPage = () => {
                       <span className="font-bold text-xl text-[#1f2022]">{formatPrice(totalMonthly)}</span>
                     </div>
                     
-                    <a href="#" className="text-xs text-gray-500 hover:underline flex items-center gap-1 mb-6">
-                      Entenda se é um bom negócio <ChevronRight className="h-3 w-3" />
-                    </a>
-
-                    {/* CTA Buttons */}
-                    <div className="space-y-3 mb-6">
+                    <div className="space-y-3 mb-6 mt-6">
                       <Button className="w-full rounded-full h-12 bg-[#3b44c6] hover:bg-[#2a308c] text-white font-bold text-base shadow-sm">
                         Agendar visita
                       </Button>
                       <Button className="w-full rounded-full h-12 bg-[#f3f5f6] hover:bg-[#e5e7eb] text-[#1f2022] font-bold text-base border-none shadow-none">
                         Fazer proposta
                       </Button>
-                    </div>
-
-                    {/* Evaluation Link */}
-                    <div className="mb-6">
-                      <a href="#" className="text-xs font-bold text-[#1f2022] hover:underline flex items-center gap-1 mb-1">
-                        Faça sua avaliação <ChevronRight className="h-3 w-3" />
-                      </a>
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        E descubra em dois minutos se você está pré-aprovado para alugar esse imóvel.
-                      </p>
                     </div>
 
                     {/* Footer Actions */}
@@ -482,91 +468,10 @@ const PropertyDetailPage = () => {
             </div>
 
           </div>
-
-          {/* SEO Links Section */}
-          <div className="mt-16 border-t border-gray-100 pt-10 space-y-10 pb-10">
-            
-            {/* Group 1 */}
-            <div>
-              <h3 className="font-bold text-[#1f2022] mb-3">Veja outros:</h3>
-              <div className="flex flex-wrap gap-x-1 gap-y-2 text-sm text-gray-600 leading-relaxed">
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento para alugar em São Paulo</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento com 2 quartos para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento com 3 quartos para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento barato para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento moderno para alugar</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento pequeno para alugar</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento decorado para alugar</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento com varanda gourmet para alugar</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento com garagem para alugar</a>
-              </div>
-            </div>
-
-            {/* Group 2 */}
-            <div>
-              <h3 className="font-bold text-[#1f2022] mb-3">Outros tipos de imóveis em Bairro {property.neighborhood}:</h3>
-              <div className="flex flex-wrap gap-x-1 gap-y-2 text-sm text-gray-600 leading-relaxed">
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Casas para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Studios e kitnets para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Casas em condomínio para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Imóveis para alugar em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamento à venda em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Casa à venda em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Casa em condomínio à venda em {property.neighborhood}</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Imóvel à venda em {property.neighborhood}</a>
-              </div>
-            </div>
-
-            {/* Group 3 */}
-            <div>
-              <h3 className="font-bold text-[#1f2022] mb-3">Bairros próximos:</h3>
-              <div className="flex flex-wrap gap-x-1 gap-y-2 text-sm text-gray-600 leading-relaxed">
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Vila Dalva</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Cidade São Francisco</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Jardim Ester Yolanda</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Adalgisa</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Parque dos Principes</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Vila Yara</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Umuarama</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Jaguaré</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Jardim D'abril</a>
-                <span>•</span>
-                <a href="#" className="hover:underline hover:text-[#3b44c6]">Apartamentos para alugar em Jardim Raposo Tavares</a>
-              </div>
-            </div>
-
-          </div>
-
         </div>
       </div>
 
       <Footer />
-
     </div>
   );
 };
