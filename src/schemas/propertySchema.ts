@@ -26,12 +26,18 @@ export const propertySchema = z.object({
 
   // Localização
   address: z.string().min(5, "Endereço é obrigatório"),
+  address_number: z.string().optional(),
+  address_complement: z.string().optional(),
   neighborhood: z.string().min(2, "Bairro é obrigatório"),
   city: z.string().min(2, "Cidade é obrigatória"),
   state: z.string().min(2, "Estado é obrigatório").default("SP"),
   near_subway: z.boolean().default(false),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+
+  // Status e Destaque
+  status: z.enum(["draft", "active", "inactive", "rented", "sold"]).default("draft"),
+  featured: z.boolean().default(false),
 
   // Valores
   price: z.coerce.number().min(1, "O valor é obrigatório"),

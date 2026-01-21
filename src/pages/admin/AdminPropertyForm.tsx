@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -70,12 +71,16 @@ export default function AdminPropertyForm() {
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
     defaultValues: {
+      status: "draft",
+      featured: false,
       operation_type: "rent",
       property_type: "Apartamento",
       state: "",
       city: "",
       neighborhood: "",
       address: "",
+      address_number: "",
+      address_complement: "",
       near_subway: false,
       furnished: false,
       pet_friendly: false,
@@ -188,6 +193,10 @@ export default function AdminPropertyForm() {
 
         form.reset({
           ...data,
+          // Converter nulls para string vazia para evitar erro de validação
+          address_number: data.address_number || "",
+          address_complement: data.address_complement || "",
+          description: data.description || "",
           condo_amenities: data.condo_amenities || [],
           available_items: data.available_items || [],
           furniture_items: data.furniture_items || [],
@@ -212,9 +221,11 @@ export default function AdminPropertyForm() {
   }, [id, form, navigate, toast]);
 
   const onSubmit = async (data: PropertyFormValues) => {
+    console.log("Tentando salvar imóvel...", data);
     setLoading(true);
     try {
       if (isEditing) {
+        console.log("Atualizando ID:", id);
         const { error } = await supabase
           .from("properties")
           .update(data)
@@ -222,6 +233,7 @@ export default function AdminPropertyForm() {
         if (error) throw error;
         toast({ title: "Imóvel atualizado!", description: "As alterações foram salvas." });
       } else {
+        console.log("Criando novo imóvel");
         const { error } = await supabase
           .from("properties")
           .insert(data);
@@ -231,7 +243,7 @@ export default function AdminPropertyForm() {
       
       navigate("/admin/properties");
     } catch (error: any) {
-      console.error(error);
+      console.error("Erro ao salvar no Supabase:", error);
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
@@ -240,6 +252,15 @@ export default function AdminPropertyForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onError = (errors: any) => {
+    console.error("Erro de validação no formulário:", errors);
+    toast({
+      variant: "destructive",
+      title: "Campos inválidos",
+      description: "Verifique os campos em vermelho.",
+    });
   };
 
   if (fetching) {
@@ -263,7 +284,7 @@ export default function AdminPropertyForm() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
           <Tabs defaultValue="basic" className="w-full">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="basic">Básico</TabsTrigger>
@@ -281,6 +302,58 @@ export default function AdminPropertyForm() {
                   <CardDescription>Dados principais do anúncio.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  
+                  {/* Status e Destaque */}
+                  <div className="flex flex-col md:flex-row gap-6 p-4 bg-slate-50 rounded-lg border">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem className="w-full md:w-[200px]">
+                          <FormLabel>Status do Anúncio</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className={
+                                field.value === "active" ? "border-green-500 text-green-700 bg-green-50" : ""
+                              }>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="draft">Rascunho</SelectItem>
+                              <SelectItem value="active">Publicado (Ativo)</SelectItem>
+                              <SelectItem value="inactive">Pausado (Inativo)</SelectItem>
+                              <SelectItem value="rented">Alugado</SelectItem>
+                              <SelectItem value="sold">Vendido</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="featured"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1 bg-white">
+                          <div className="space-y-0.5">
+                            <FormLabel>Destaque na Home</FormLabel>
+                            <FormDescription>
+                              O imóvel aparecerá no topo das buscas.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="title"
@@ -495,19 +568,47 @@ export default function AdminPropertyForm() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Endereço</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Rua, Número..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-[2fr_1fr_1fr] gap-4">
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Logradouro</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Rua, Avenida..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="address_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número</FormLabel>
+                          <FormControl>
+                            <Input placeholder="123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="address_complement"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Complemento</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ap 101" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}

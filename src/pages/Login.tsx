@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/Header";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function Login() {
 
       if (error) throw error;
 
-      navigate("/"); // Redirecionar para home após login
+      navigate("/");
     } catch (err: any) {
       setError(err.message || "Erro ao fazer login");
     } finally {
@@ -37,7 +38,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header variant="simple" /> {/* Assumindo que Header aceita variante ou usamos o padrão */}
+      <Header variant="simple" />
       
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
@@ -90,7 +91,14 @@ export default function Login() {
               className="w-full h-12 bg-[#3b44c6] hover:bg-[#2a308c] text-white font-bold text-base"
               disabled={loading}
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
             </Button>
           </form>
 

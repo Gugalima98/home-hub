@@ -57,6 +57,9 @@ const PropertyDetailPage = () => {
 
       if (error) {
         console.error("Error fetching property:", error);
+      } else if (data && data.status !== 'active') {
+         // Se não for ativo, trata como não encontrado
+         setProperty(null);
       } else {
         setProperty(data);
       }

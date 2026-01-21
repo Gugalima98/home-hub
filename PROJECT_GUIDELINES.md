@@ -5,97 +5,96 @@ O objetivo é construir uma plataforma imobiliária de alta fidelidade visual e 
 
 ### Tecnologias Principais
 *   **Frontend:** React, Vite, Tailwind CSS, Shadcn/UI.
-*   **Backend:** Supabase (Database, Auth, Storage).
+*   **Backend:** Supabase (Database, Auth, Storage, Edge Functions).
+*   **Mapas:** Leaflet (OpenStreetMap) + Nominatim (Geocoding).
 *   **Deploy:** Vercel.
-*   **SEO:** React Helmet Async (SPA) ou migração futura para SSR se necessário.
+*   **SEO:** React Helmet Async (SPA) + URLs Amigáveis.
 
 ---
 
-## 2. Status Atual (Frontend)
-*   **Home Page:** 95% concluída. Hero section, Service Cards (com carrosséis e vídeos de fundo), Slider de Cidades e Buscas Populares implementados com alta fidelidade.
-*   **Barra de Filtros:** Visual implementado ("chunky pills"), fixa no topo e responsiva. **Pendente:** Conteúdo interno dos dropdowns e sidebar.
-*   **Listagem de Imóveis:** Layout base implementado (Lista + Mapa). Falta refinar o cabeçalho da lista e integrar mapa real.
-*   **SEO:** Estrutura base com `react-helmet-async` configurada.
+## 2. Status Atual (Concluído)
+
+### 2.1. Backend & Autenticação (Supabase)
+*   **Autenticação:** Login e Cadastro funcionais (`AuthProvider`). Proteção de rotas (`ProtectedRoute`) implementada.
+*   **Banco de Dados:**
+    *   Tabela `properties` criada com schema robusto (incluindo JSONB para imagens categorizadas e campos de geolocalização).
+    *   Campo `code` adicionado para IDs curtos e amigáveis (ex: 100, 101).
+*   **Storage:** Bucket `property-images` configurado para upload de fotos.
+
+### 2.2. CMS (Painel Administrativo - `/admin`)
+*   **Estrutura:** Layout exclusivo para admin, separado do painel do usuário.
+*   **Listagem:** Tabela de imóveis com busca e ações de Excluir/Editar.
+*   **Workflow de Imóveis:** Suporte a status (`draft`, `active`, `inactive`, `rented`, `sold`) para controle de rascunhos e publicação.
+*   **Cadastro/Edição de Imóveis:** Formulário avançado com `react-hook-form` e `zod`.
+    *   **Upload Inteligente:** Upload de fotos separado por cômodo (Sala, Cozinha, Fachada, etc.).
+    *   **Localização Automática:** Integração com **ViaCEP** (preenchimento de endereço) e **IBGE** (dropdowns de Estado/Cidade).
+    *   **Geocodificação:** Busca automática de Latitude/Longitude via API Nominatim ao preencher o endereço.
+    *   **Destaques:** Funcionalidade de marcar imóveis como `featured` (Destaque).
+
+### 2.3. Gestão de Usuários & Permissões (RBAC)
+*   **Sistema de Roles:** Implementado suporte para perfis: `admin`, `realtor` (corretor), `owner` e `user`.
+*   **Painel de Usuários (`/admin/users`):** Interface para listagem, edição e exclusão de usuários.
+*   **Criação Administrativa:** Admins podem criar novos usuários (ex: corretores) via interface, acionando uma **Edge Function** (`create-user`) segura.
+*   **Segurança:** Implementação de políticas RLS com funções `SECURITY DEFINER` para evitar recursão infinita na verificação de permissões.
+
+### 2.4. Frontend Público (Integração Real)
+*   **Home & Listagem (`/imoveis`):**
+    *   Conectada ao Supabase. Exibe imóveis reais cadastrados no CMS.
+    *   **Filtros Funcionais:** Barra de filtros (`FilterBar`) conectada a um **Contexto Global (`FilterContext`)**. Filtros de Preço, Quartos, Vagas, Operação (Alugar/Comprar) e Busca Textual funcionam em tempo real.
+    *   **Mapa Interativo:** Exibe marcadores nas coordenadas reais dos imóveis. Popups com foto, preço e link funcional.
+*   **Detalhes do Imóvel (`/imovel/:code/:operation/:slug`):**
+    *   **URLs Amigáveis:** Implementadas para SEO (ex: `/imovel/123/alugar/apartamento-moema-sp`).
+    *   **Dados Reais:** Exibe carrossel de fotos categorizadas, preço calculado, descrição e características vindas do banco.
+*   **Painel do Usuário (`/dashboard`):** Estrutura visual implementada com Sidebar responsiva (shadcn/ui), aguardando conexão com dados reais.
 
 ---
 
-## 3. Próximos Passos: Frontend (Faltante)
+## 3. Próximos Passos (Pendências)
 
-### 3.1. Refinamento da Página de Listagem e Filtros
-*   [ ] **Menus dos Filtros (Dropdowns Individuais):**
-    *   Ajustar o design interno de cada dropdown (Preço, Tipo, Quartos, etc.) para ser fiel ao original. Atualmente são placeholders ou Shadcn genéricos.
-    *   Implementar lógica real de seleção (Slider de preço duplo, Seleção múltipla de tipos).
-*   [ ] **Sidebar "Mais Filtros":**
-    *   Criar o componente de Menu Lateral Esquerdo (Drawer/Sheet) que abre ao clicar em "Mais filtros".
-    *   Incluir todos os filtros avançados neste menu (Andar, Sol, Mobília, etc.).
-*   [ ] **Cabeçalho da Lista:** Implementar contador de imóveis ("X imóveis em SP") e botão de ordenação estilo dropdown limpo.
-*   [ ] **Card de Imóvel:** Ajustar layout final (Carrossel de imagens no card, informações claras de preço e endereço).
-*   [ ] **Mapa:** Substituir o placeholder por **Leaflet** (OpenStreetMap) ou Google Maps API. Fazer os pins serem clicáveis e sincronizados com a lista.
+### 3.1. Refinamento de Filtros e Busca
+*   [ ] **Sidebar "Mais Filtros":** Conectar o componente `FiltersSidebar.tsx` (que abre o menu lateral) ao `FilterContext`. O componente visual está pronto, mas o contexto precisa ser expandido para suportar arrays específicos (amenities, furniture, etc.).
+*   [ ] **Filtros Avançados no Backend:** Garantir que a query do Supabase suporte todos os filtros específicos da Sidebar.
 
-### 3.2. Página de Detalhes do Imóvel
-*   [ ] Refinar a galeria de fotos (Grid bento ou carrossel full-screen).
-*   [ ] Ajustar a calculadora de preços flutuante (Sticky Sidebar).
-*   [ ] Formulário de agendamento de visita funcional (apenas visual por enquanto).
+### 3.2. Funcionalidades de Usuário
+*   [ ] **Favoritos Reais:**
+    *   Criar tabela `favorites` (relação `user_id` <-> `property_id`).
+    *   Atualizar o botão de coração no Card e na Página de Detalhes para salvar no banco.
+    *   Criar página "Meus Favoritos" no Dashboard do Usuário.
+*   [ ] **Agendamento/Leads:**
+    *   Criar tabela `leads` ou `visitas`.
+    *   Fazer o botão "Agendar Visita" salvar um registro no banco para o proprietário/admin ver.
 
-### 3.3. Sistema de Login & Autenticação
-*   [ ] **Página de Login/Cadastro:** Criar telas para Login e Registro.
-*   [ ] **Tipos de Usuário:** Diferenciar visualmente ou no fluxo:
-    *   **Usuário Comum:** Busca e favorita imóveis.
-    *   **Anunciante (Proprietário):** Cadastra imóveis.
-    *   **Admin:** Gerencia todo o sistema (CMS).
-
-### 3.4. Fluxo de Anúncio (User/Proprietário)
-*   [ ] Criar wizard (passo a passo) para cadastro de imóvel:
-    *   Dados básicos (Endereço, Tipo).
-    *   Detalhes (Quartos, Área, Vagas).
-    *   Upload de Fotos.
-    *   Definição de Valores.
+### 3.3. Painel do Usuário (`/dashboard`)
+*   [ ] Conectar a listagem "Meus Imóveis" (Visual pronto, falta lógica).
+*   [ ] Implementar edição restrita (apenas dos próprios imóveis).
 
 ---
 
-## 4. Backend (Supabase)
+## 4. Estrutura de Dados (Referência)
 
-### 4.1. Banco de Dados (PostgreSQL)
-Criar as tabelas principais:
-*   `profiles`: Dados estendidos dos usuários.
-*   `properties`: Tabela principal de imóveis (título, descrição, preço, endereço, coordenadas lat/long, features JSONB).
-*   `property_images`: URLs das imagens vinculadas aos imóveis.
-*   `favorites`: Relação usuário-imóvel.
+### Tabela `properties`
+*   `id` (UUID) / `code` (Int - ID Amigável, Unique Index)
+*   `owner_id` (UUID - FK auth.users)
+*   `status` (Enum: draft, active, inactive, rented, sold)
+*   `featured` (Boolean)
+*   `views_count` (Integer)
+*   `title`, `description`
+*   `operation_type` (rent/buy), `property_type` (Apartamento/Casa...)
+*   `price`, `condo_fee`, `iptu`, `total_price`
+*   `address`, `address_number`, `address_complement`, `neighborhood`, `city`, `state`, `cep`, `latitude`, `longitude`
+*   `bedrooms`, `suites`, `bathrooms`, `parking_spots`, `area`
+*   `images` (JSONB: `{ "Sala": ["url1"], "Cozinha": ["url2"] }`)
+*   Arrays de features: `condo_amenities`, `available_items`, `furniture_items`, `wellness_items`, `appliances_items`, `room_items`, `accessibility_items`.
 
-### 4.2. Autenticação
-*   Configurar Supabase Auth (Email/Senha e Social Login se desejar).
-*   Implementar RLS (Row Level Security) para proteger dados (apenas admin edita tudo, proprietário edita seus imóveis).
-
-### 4.3. Storage
-*   Configurar buckets para upload de imagens dos imóveis.
-*   Otimização de imagens (se possível via Edge Functions ou no upload).
-
----
-
-## 5. CMS (Painel Administrativo)
-O "CMS" será uma área restrita do próprio frontend (`/admin`) acessível apenas para usuários com role `admin`.
-
-### Funcionalidades do CMS:
-*   [ ] **Dashboard:** Visão geral de métricas (imóveis cadastrados, acessos).
-*   [ ] **Gestão de Imóveis:** Tabela com busca e filtros para Editar, Excluir ou Aprovar/Reprovar anúncios de usuários.
-*   [ ] **Gestão de Destaques:** Selecionar quais imóveis aparecem na Home ou no topo das listas.
-*   [ ] **Gestão de SEO:** (Opcional) Editar meta tags de páginas específicas via banco de dados.
+### Tabela `profiles`
+*   `id` (UUID - PK, FK auth.users)
+*   `email`, `full_name`, `phone`, `creci`
+*   `role` (Enum: admin, realtor, owner, user)
 
 ---
 
-## 6. SEO & Performance (Finalização)
-*   [ ] Gerar Sitemap.xml dinâmico.
-*   [ ] Configurar Robots.txt.
-*   [ ] Garantir tags OpenGraph (OG) corretas para compartilhamento em redes sociais.
-*   [ ] Lazy loading de imagens e componentes pesados.
-
----
-
-## Ordem de Execução Sugerida
-1.  **Frontend:** Refinar Filtros (Dropdowns e Sidebar) e Mapa.
-2.  **Frontend:** Finalizar Página de Detalhes.
-3.  **Frontend:** Telas de Login e Cadastro.
-4.  **Backend:** Configurar Supabase e conectar o Login.
-5.  **Frontend + Backend:** Criar o fluxo de "Anunciar Imóvel" já salvando no banco.
-6.  **Frontend:** Conectar a Home e Busca aos dados reais do banco.
-7.  **CMS:** Criar o painel administrativo.
+## 5. Ordem de Execução Sugerida
+1.  **Sidebar de Filtros:** Atualizar `FilterContext` e conectar `FiltersSidebar` para habilitar busca avançada.
+2.  **Favoritos:** Implementar tabela e lógica de favoritar imóveis.
+3.  **Leads:** Implementar fluxo de "Agendar Visita".
+4.  **Refinamento do Dashboard:** Conectar dados reais ao layout existente.

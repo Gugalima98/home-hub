@@ -1,4 +1,4 @@
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,10 +51,10 @@ export default function AdminLayout() {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
-                      <a href="/admin">
+                      <Link to="/admin">
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Visão Geral</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -67,18 +67,18 @@ export default function AdminLayout() {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
-                      <a href="/admin/properties">
+                      <Link to="/admin/properties">
                         <Building2 className="h-4 w-4" />
                         <span>Imóveis</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
-                      <a href="/admin/users">
+                      <Link to="/admin/users">
                         <Users className="h-4 w-4" />
                         <span>Usuários</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -91,10 +91,10 @@ export default function AdminLayout() {
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
-                      <a href="/admin/settings">
+                      <Link to="/admin/settings">
                         <Settings className="h-4 w-4" />
                         <span>Geral</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

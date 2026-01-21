@@ -19,6 +19,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProperties from "./pages/admin/AdminProperties";
 import AdminPropertyForm from "./pages/admin/AdminPropertyForm";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -31,11 +32,12 @@ const App = () => (
         <FilterProvider>
           <BrowserRouter>
             <Routes>
-                                      {/* Public Routes */}
-                                      <Route path="/" element={<Index />} />
-                                      <Route path="/imoveis" element={<PropertiesPage />} />
-                                      <Route path="/imovel/:code/:operation/:slug" element={<PropertyDetailPage />} />
-                                      <Route path="/login" element={<Login />} />              <Route path="/register" element={<Register />} />
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/imoveis" element={<PropertiesPage />} />
+              <Route path="/imovel/:code/:operation/:slug" element={<PropertyDetailPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
               {/* User Dashboard */}
               <Route
@@ -60,6 +62,7 @@ const App = () => (
                 <Route path="properties" element={<AdminProperties />} />
                 <Route path="properties/new" element={<AdminPropertyForm />} />
                 <Route path="properties/edit/:id" element={<AdminPropertyForm />} />
+                <Route path="users" element={<AdminUsers />} />
               </Route>
 
               {/* Catch-all */}

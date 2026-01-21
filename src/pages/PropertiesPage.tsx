@@ -44,6 +44,7 @@ const PropertiesPage = () => {
       let query = supabase
         .from("properties")
         .select("*")
+        .eq("status", "active")
         .order("created_at", { ascending: false });
 
       if (filters.operationType) {

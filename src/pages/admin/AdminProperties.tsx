@@ -24,6 +24,8 @@ interface Property {
   operation_type: string;
   property_type: string;
   created_at: string;
+  status: "draft" | "active" | "inactive" | "rented" | "sold";
+  views_count: number;
 }
 
 export default function AdminProperties() {
@@ -36,7 +38,7 @@ export default function AdminProperties() {
     setLoading(true);
     const { data, error } = await supabase
       .from("properties")
-      .select("id, title, city, state, price, operation_type, property_type, created_at")
+      .select("id, title, city, state, price, operation_type, property_type, created_at, status, views_count")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -47,6 +49,7 @@ export default function AdminProperties() {
         description: "Não foi possível carregar a lista de imóveis.",
       });
     } else {
+      // @ts-ignore
       setProperties(data || []);
     }
     setLoading(false);
@@ -79,6 +82,23 @@ export default function AdminProperties() {
   const filteredProperties = properties.filter((property) =>
     property.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-600 hover:bg-green-700">Ativo</Badge>;
+      case "draft":
+        return <Badge variant="outline" className="text-gray-500">Rascunho</Badge>;
+      case "inactive":
+        return <Badge variant="secondary">Inativo</Badge>;
+      case "rented":
+        return <Badge className="bg-blue-600">Alugado</Badge>;
+      case "sold":
+        return <Badge className="bg-blue-600">Vendido</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -113,6 +133,7 @@ export default function AdminProperties() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Status</TableHead>
               <TableHead>Título</TableHead>
               <TableHead>Localização</TableHead>
               <TableHead>Tipo</TableHead>
@@ -124,13 +145,13 @@ export default function AdminProperties() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Carregando imóveis...
                 </TableCell>
               </TableRow>
             ) : filteredProperties.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <div className="flex flex-col items-center justify-center text-gray-500">
                     <Building2 className="h-8 w-8 mb-2 opacity-20" />
                     <p>Nenhum imóvel encontrado.</p>
@@ -140,7 +161,13 @@ export default function AdminProperties() {
             ) : (
               filteredProperties.map((property) => (
                 <TableRow key={property.id}>
-                  <TableCell className="font-medium">{property.title}</TableCell>
+                  <TableCell>{getStatusBadge(property.status)}</TableCell>
+                  <TableCell className="font-medium">
+                    {property.title}
+                    <div className="text-xs text-muted-foreground">
+                      {property.views_count || 0} visualizações
+                    </div>
+                  </TableCell>
                   <TableCell>{property.city}/{property.state}</TableCell>
                   <TableCell>{property.property_type}</TableCell>
                   <TableCell>
