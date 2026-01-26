@@ -20,7 +20,8 @@ import {
   Users, 
   Settings, 
   LogOut, 
-  ShieldCheck 
+  ShieldCheck,
+  MapPin
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -70,6 +71,14 @@ export default function AdminLayout() {
                       <Link to="/admin/properties">
                         <Building2 className="h-4 w-4" />
                         <span>Imóveis</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
+                      <Link to="/admin/seo-cities">
+                        <MapPin className="h-4 w-4" />
+                        <span>SEO Cidades</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

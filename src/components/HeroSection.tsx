@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { MapPin, Home, Wallet, BedDouble, Search } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { MapPin, Home, Wallet, BedDouble } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import heroImage from "@/assets/hero-family.jpg";
-import locationsData from "@/data/locations.json";
+import { supabase } from "@/lib/supabase";
 
 // Custom Select Component remains the same
 const CustomSelect = ({ icon, label, placeholder, items, onValueChange, value, disabled }: { icon: React.ReactNode; label: string; placeholder: string; items: {value: string; label: string}[]; onValueChange?: (value: string) => void; value?: string; disabled?: boolean; }) => (
@@ -22,7 +22,7 @@ const CustomSelect = ({ icon, label, placeholder, items, onValueChange, value, d
                 <SelectTrigger className="border-0 p-0 h-auto justify-start focus:ring-0 focus:ring-offset-0 bg-transparent disabled:bg-transparent">
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
+                <SelectContent className="bg-popover z-50 max-h-[300px]">
                     {items.map(item => (
                         <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
                     ))}
@@ -32,68 +32,109 @@ const CustomSelect = ({ icon, label, placeholder, items, onValueChange, value, d
     </div>
 );
 
+type AvailableLocation = {
+  city: string;
+  state: string;
+  neighborhood: string;
+};
 
 const HeroSection = () => {
   const [searchType, setSearchType] = useState<"buscar" | "anunciar">("buscar");
-  const [rentOrBuy, setRentOrBuy] = useState<"alugar" | "comprar">("alugar");
+  const [rentOrBuy, setRentOrBuy] = useState<"rent" | "buy">("rent");
   const navigate = useNavigate();
 
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
-  const [neighborhoods, setNeighborhoods] = useState<{value: string, label: string}[]>([]);
-
-  const mainCities = [
-    'São Paulo, SP', 'Rio de Janeiro, RJ', 'Belo Horizonte, MG', 'Brasília, DF', 
-    'Salvador, BA', 'Fortaleza, CE', 'Curitiba, PR', 'Recife, PE', 
-    'Porto Alegre, RS', 'Manaus, AM', 'Goiânia, GO', 'Belém, PA'
-  ];
   
-  const spNeighborhoods = ["Jardins", "Bela Vista", "Consolação", "Jardim Europa", "Pinheiros", "Vila Madalena", "Moema", "República", "Perdizes", "Itaim Bibi"];
+  // Dados brutos vindos do banco
+  const [rawLocations, setRawLocations] = useState<AvailableLocation[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
-  const normalizeStr = (str: string) => 
-    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Buscar localizações disponíveis no Supabase
+  useEffect(() => {
+    async function fetchLocations() {
+      setLoadingLocations(true);
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('city, state, neighborhood')
+          .eq('status', 'active')
+          .eq('operation_type', rentOrBuy);
 
-  // Memoize the city list creation as it's a heavy operation
-  const cityItems = useMemo(() => {
-    const cities: { value: string; label: string }[] = [];
-    for (const state in locationsData) {
-      for (const city in locationsData[state as keyof typeof locationsData]) {
-        const value = `${city}, ${state}`;
-        cities.push({ value: value, label: value });
+        if (error) throw error;
+        
+        if (data) {
+          // Remover duplicatas exatas de (city, state, neighborhood)
+          const uniqueData = data.filter((loc, index, self) => 
+            index === self.findIndex((t) => (
+              t.city === loc.city && t.state === loc.state && t.neighborhood === loc.neighborhood
+            ))
+          );
+          setRawLocations(uniqueData);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar localizações:", err);
+      } finally {
+        setLoadingLocations(false);
       }
     }
-    
-    // Manually add São Paulo if it's not present
-    if (!cities.some(c => c.value === 'São Paulo, SP')) {
-      cities.push({ value: 'São Paulo, SP', label: 'São Paulo, SP' });
-    }
-    
-    // Normalize main cities for robust comparison
-    const normalizedMainCities = mainCities.map(normalizeStr);
 
-    // Filter for main cities and then sort
-    return cities
-      .filter(city => normalizedMainCities.includes(normalizeStr(city.value)))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, []);
-
-  const handleCityChange = (cityValue: string) => {
-    setSelectedCity(cityValue);
-    setSelectedNeighborhood(''); // Reset neighborhood
+    fetchLocations();
     
-    if (cityValue === 'São Paulo, SP') {
-      setNeighborhoods(spNeighborhoods.map(n => ({ value: n, label: n })).sort((a,b) => a.label.localeCompare(b.label)));
-    } else if (cityValue) {
-      const [cityName, stateAbbr] = cityValue.split(', ');
-      const neighborhoodsData = locationsData[stateAbbr as keyof typeof locationsData]?.[cityName] || [];
-      setNeighborhoods(neighborhoodsData.map(n => ({ value: n, label: n })).sort((a,b) => a.label.localeCompare(b.label)));
-    } else {
-      setNeighborhoods([]);
-    }
-  };
+    // Resetar seleções ao mudar o tipo de operação
+    setSelectedCity('');
+    setSelectedNeighborhood('');
+  }, [rentOrBuy]);
+
+  // Processar cidades únicas para o dropdown
+  const cityItems = useMemo(() => {
+    const citiesSet = new Set<string>();
+    rawLocations.forEach(loc => {
+      if (loc.city && loc.state) {
+        citiesSet.add(`${loc.city}, ${loc.state}`);
+      }
+    });
+    
+    return Array.from(citiesSet).sort().map(cityStr => ({
+      value: cityStr,
+      label: cityStr
+    }));
+  }, [rawLocations]);
+
+  // Processar bairros baseados na cidade selecionada
+  const neighborhoodItems = useMemo(() => {
+    if (!selectedCity) return [];
+    
+    const [city, state] = selectedCity.split(', ');
+    
+    const neighborhoods = rawLocations
+      .filter(loc => loc.city === city && loc.state === state && loc.neighborhood)
+      .map(loc => loc.neighborhood);
+      
+    // Remover duplicatas de bairros e ordenar
+    return Array.from(new Set(neighborhoods)).sort().map(n => ({
+      value: n,
+      label: n
+    }));
+  }, [selectedCity, rawLocations]);
 
   const handleSearch = () => {
-    navigate("/imoveis");
+    const params = new URLSearchParams();
+    params.set("operation", rentOrBuy);
+    
+    if (selectedCity) {
+      // Como o filtro espera apenas a string de busca ou filtros específicos,
+      // vamos passar a localização para o contexto via query param ou state se possível.
+      // O FilterContext atual lê de searchLocation?
+      // Vamos tentar passar via query params padrão
+      params.set("location", selectedCity);
+    }
+    
+    if (selectedNeighborhood) {
+       params.set("neighborhood", selectedNeighborhood);
+    }
+
+    navigate(`/imoveis?${params.toString()}`);
   };
 
   const valueItems = [
@@ -157,9 +198,9 @@ const HeroSection = () => {
                   {/* Rent/Buy Tabs */}
                   <div className="flex justify-start gap-6 border-b border-gray-200">
                       <button 
-                          onClick={() => setRentOrBuy('alugar')}
+                          onClick={() => setRentOrBuy('rent')}
                           className={`text-sm font-medium pb-3 transition-all relative ${
-                            rentOrBuy === 'alugar' 
+                            rentOrBuy === 'rent' 
                               ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
                               : 'text-gray-500 hover:text-gray-800'
                           }`}
@@ -167,9 +208,9 @@ const HeroSection = () => {
                           Alugar
                       </button>
                       <button 
-                          onClick={() => setRentOrBuy('comprar')}
+                          onClick={() => setRentOrBuy('buy')}
                           className={`text-sm font-medium pb-3 transition-all relative ${
-                            rentOrBuy === 'comprar' 
+                            rentOrBuy === 'buy' 
                               ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
                               : 'text-gray-500 hover:text-gray-800'
                           }`}
@@ -180,8 +221,24 @@ const HeroSection = () => {
         
                   {/* Form */}
                   <div className="space-y-3">
-                      <CustomSelect icon={<MapPin size={20}/>} label="Cidade" placeholder="Busque por cidade" items={cityItems} onValueChange={handleCityChange} value={selectedCity}/>
-                      <CustomSelect icon={<Home size={20}/>} label="Bairro" placeholder="Busque por bairro" items={neighborhoods} onValueChange={setSelectedNeighborhood} value={selectedNeighborhood} disabled={!selectedCity} />
+                      <CustomSelect 
+                        icon={<MapPin size={20}/>} 
+                        label="Cidade" 
+                        placeholder={loadingLocations ? "Carregando..." : "Busque por cidade"} 
+                        items={cityItems} 
+                        onValueChange={setSelectedCity} 
+                        value={selectedCity}
+                        disabled={loadingLocations || cityItems.length === 0}
+                      />
+                      <CustomSelect 
+                        icon={<Home size={20}/>} 
+                        label="Bairro" 
+                        placeholder="Busque por bairro" 
+                        items={neighborhoodItems} 
+                        onValueChange={setSelectedNeighborhood} 
+                        value={selectedNeighborhood} 
+                        disabled={!selectedCity || neighborhoodItems.length === 0} 
+                      />
                       <div className="grid grid-cols-2 gap-3">
                           <CustomSelect icon={<Wallet size={20}/>} label="Valor total até" placeholder="Escolha o valor" items={valueItems} />
                           <CustomSelect icon={<BedDouble size={20}/>} label="Quartos" placeholder="Nº de quartos" items={roomItems} />

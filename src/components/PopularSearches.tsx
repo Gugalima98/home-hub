@@ -1,23 +1,27 @@
-const popularSearches = [
-  "Apartamento à venda Diadema",
-  "Apartamento para alugar em Curitiba",
-  "Apartamento para alugar Florianópolis",
-  "Casas à venda em Barueri",
-  "Apartamento à venda Taboão da Serra",
-  "Apartamento para alugar em Goiânia",
-  "Apartamento para alugar Niterói",
-  "Casas à venda em Jundiaí",
-  "Apartamento barato em São Paulo",
-  "Apartamento para alugar em Salvador",
-  "Apartamento para alugar próximo ao metrô em São Paulo",
-  "Casas para alugar em Cotia",
-  "Apartamento barato no Rio de Janeiro",
-  "Apartamento para alugar em Santos",
-  "Apartamento para alugar próximo ao metrô no Rio de Janeiro",
-  "Casas para alugar em São Gonçalo",
-];
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const PopularSearches = () => {
+  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchPopular() {
+      const { data } = await supabase
+        .from('seo_cities')
+        .select('links')
+        .eq('city', 'Popular Searches')
+        .single();
+      
+      if (data && data.links) {
+        // @ts-ignore
+        setLinks(data.links);
+      }
+    }
+    fetchPopular();
+  }, []);
+
+  if (links.length === 0) return null;
+
   return (
     <section className="container mx-auto px-4 py-16">
       {/* Outer Beige Container */}
@@ -29,13 +33,13 @@ const PopularSearches = () => {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6">
-            {popularSearches.map((search) => (
+            {links.map((link, idx) => (
               <a
-                key={search}
-                href="#"
+                key={idx}
+                href={link.url}
                 className="text-sm font-medium text-[#1f2022] hover:text-[#3b44c6] hover:underline transition-colors block leading-relaxed"
               >
-                {search}
+                {link.label}
               </a>
             ))}
           </div>

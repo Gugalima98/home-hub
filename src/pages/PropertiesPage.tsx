@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Map, List, Search, ChevronRight, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -29,13 +29,33 @@ const neighborhoods = [
 ];
 
 const PropertiesPage = () => {
-  const { filters } = useFilters();
+  const { filters, setFilter } = useFilters();
+  const [searchParams] = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
+
+  // Sync URL params to Filter Context on mount
+  useEffect(() => {
+    const op = searchParams.get("operation");
+    const loc = searchParams.get("location");
+    const neigh = searchParams.get("neighborhood");
+
+    if (op && (op === 'rent' || op === 'buy')) {
+      // Only update if different to avoid loops if context updates URL later
+      if (filters.operationType !== op) {
+        setFilter("operationType", op);
+      }
+    }
+
+    const targetLocation = neigh || loc;
+    if (targetLocation && filters.searchLocation !== targetLocation) {
+        setFilter("searchLocation", targetLocation);
+    }
+  }, [searchParams]); // Run when URL params change
 
   useEffect(() => {
     const fetchProperties = async () => {

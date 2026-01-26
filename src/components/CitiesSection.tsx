@@ -1,123 +1,48 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
 interface CityLinks {
   city: string;
-  links: string[];
+  links: { label: string; url: string }[];
 }
-
-const rentData: CityLinks[] = [
-  {
-    city: "São Paulo",
-    links: [
-      "Apartamentos para alugar em São Paulo",
-      "Casas para alugar em São Paulo",
-      "Studios e kitnets para alugar em São Paulo",
-      "Casas em condomínio para alugar em São Paulo",
-      "Condomínios em São Paulo",
-    ],
-  },
-  {
-    city: "Rio de Janeiro",
-    links: [
-      "Apartamentos para alugar em Rio de Janeiro",
-      "Casas para alugar em Rio de Janeiro",
-      "Studios e kitnets para alugar em Rio de Janeiro",
-      "Casas em condomínio para alugar em Rio de Janeiro",
-      "Condomínios no Rio de Janeiro",
-    ],
-  },
-  {
-    city: "Porto Alegre",
-    links: [
-      "Apartamentos para alugar em Porto Alegre",
-      "Casas para alugar em Porto Alegre",
-      "Studios e kitnets para alugar em Porto Alegre",
-      "Casas em condomínio para alugar em Porto Alegre",
-      "Condomínios em Porto Alegre",
-    ],
-  },
-  {
-    city: "Belo Horizonte",
-    links: [
-      "Apartamentos para alugar em Belo Horizonte",
-      "Casas para alugar em Belo Horizonte",
-      "Studios e kitnets para alugar em Belo Horizonte",
-      "Casas em condomínio para alugar em Belo Horizonte",
-      "Condomínios em Belo Horizonte",
-    ],
-  },
-  {
-    city: "Campinas",
-    links: [
-      "Apartamentos para alugar em Campinas",
-      "Casas para alugar em Campinas",
-      "Studios e kitnets para alugar em Campinas",
-      "Casas em condomínio para alugar em Campinas",
-      "Condomínios em Campinas",
-    ],
-  },
-];
-
-const buyData: CityLinks[] = [
-  {
-    city: "São Paulo",
-    links: [
-      "Apartamentos à venda em São Paulo",
-      "Casas à venda em São Paulo",
-      "Studios e kitnets à venda em São Paulo",
-      "Casas em condomínio à venda em São Paulo",
-      "Imóveis à venda em São Paulo",
-    ],
-  },
-  {
-    city: "Rio de Janeiro",
-    links: [
-      "Apartamentos à venda em Rio de Janeiro",
-      "Casas à venda em Rio de Janeiro",
-      "Studios e kitnets à venda em Rio de Janeiro",
-      "Casas em condomínio à venda em Rio de Janeiro",
-      "Imóveis à venda no Rio de Janeiro",
-    ],
-  },
-  {
-    city: "Porto Alegre",
-    links: [
-      "Apartamentos à venda em Porto Alegre",
-      "Casas à venda em Porto Alegre",
-      "Studios e kitnets à venda em Porto Alegre",
-      "Casas em condomínio à venda em Porto Alegre",
-      "Imóveis à venda em Porto Alegre",
-    ],
-  },
-  {
-    city: "Belo Horizonte",
-    links: [
-      "Apartamentos à venda em Belo Horizonte",
-      "Casas à venda em Belo Horizonte",
-      "Studios e kitnets à venda em Belo Horizonte",
-      "Casas em condomínio à venda em Belo Horizonte",
-      "Imóveis à venda em Belo Horizonte",
-    ],
-  },
-  {
-    city: "Campinas",
-    links: [
-      "Apartamentos à venda em Campinas",
-      "Casas à venda em Campinas",
-      "Studios e kitnets à venda em Campinas",
-      "Casas em condomínio à venda em Campinas",
-      "Imóveis à venda em Campinas",
-    ],
-  },
-];
 
 const CitiesSection = () => {
   const [activeTab, setActiveTab] = useState<"alugar" | "comprar">("alugar");
+  const [rentCities, setRentCities] = useState<CityLinks[]>([]);
+  const [buyCities, setBuyCities] = useState<CityLinks[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const currentData = activeTab === "alugar" ? rentData : buyData;
+  useEffect(() => {
+    async function fetchData() {
+      const { data, error } = await supabase
+        .from('seo_cities')
+        .select('*')
+        .order('city');
+
+      if (error) {
+        console.error("Erro ao buscar cidades SEO:", error);
+        return;
+      }
+
+      if (data) {
+        const rent = data
+          .filter(item => item.operation === 'rent' && item.city !== 'Popular Searches')
+          .map(item => ({ city: item.city, links: item.links }));
+        
+        const buy = data
+          .filter(item => item.operation === 'buy' && item.city !== 'Popular Searches')
+          .map(item => ({ city: item.city, links: item.links }));
+
+        setRentCities(rent);
+        setBuyCities(buy);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const currentData = activeTab === "alugar" ? rentCities : buyCities;
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -135,7 +60,7 @@ const CitiesSection = () => {
     <section className="bg-white py-12">
       <div className="container mx-auto px-4">
         <h2 className="text-2xl font-bold text-[#1f2022] mb-6">
-          Onde você quiser, tem um HomeHub
+          Onde você quiser, tem a R7 Consultoria
         </h2>
 
         {/* Tabs */}
@@ -164,43 +89,49 @@ const CitiesSection = () => {
 
         {/* Cities Slider */}
         <div className="relative group">
-          <div 
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-8 pb-4 scrollbar-hide snap-x"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {currentData.map((cityData) => (
-              <div key={cityData.city} className="min-w-[200px] flex-1 snap-start">
-                <h3 className="text-2xl font-bold text-[#3b44c6] mb-6 whitespace-nowrap">
-                  {cityData.city}
-                </h3>
-                <ul className="space-y-4">
-                  {cityData.links.map((link) => (
-                    <li key={link}>
-                      <a
-                        href="#"
-                        className="text-sm text-gray-700 hover:text-[#3b44c6] hover:underline transition-colors block leading-relaxed"
-                      >
-                        {link}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          {currentData.length === 0 ? (
+            <div className="text-gray-500 py-8">Nenhuma cidade cadastrada para esta operação.</div>
+          ) : (
+            <div 
+              ref={scrollContainerRef}
+              className="flex overflow-x-auto gap-8 pb-4 scrollbar-hide snap-x"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {currentData.map((cityData, index) => (
+                <div key={`${cityData.city}-${index}`} className="min-w-[280px] flex-1 snap-start border-r border-gray-100 last:border-0 pr-8">
+                  <h3 className="text-2xl font-bold text-[#3b44c6] mb-6 whitespace-nowrap">
+                    {cityData.city}
+                  </h3>
+                  <ul className="space-y-3">
+                    {cityData.links.map((link, idx) => (
+                      <li key={idx}>
+                        <a
+                          href={link.url}
+                          className="text-sm text-gray-600 hover:text-[#3b44c6] hover:underline transition-colors block leading-relaxed"
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Navigation Arrows */}
           <div className="flex justify-end gap-2 mt-8">
              <button 
                 onClick={scrollLeft}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 transition-colors"
+                disabled={currentData.length === 0}
              >
                <ChevronLeft className="h-6 w-6" />
              </button>
              <button 
                 onClick={scrollRight}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 transition-colors"
+                disabled={currentData.length === 0}
              >
                <ChevronRight className="h-6 w-6" />
              </button>

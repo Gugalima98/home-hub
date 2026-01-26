@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import illustrationRent from "@/assets/illustration-rent.png";
 import illustrationBuy from "@/assets/illustration-buy.png";
 // Importing property images for backgrounds
@@ -16,8 +17,9 @@ import bgImage6 from "@/assets/property-5.jpg";
 const CarouselHalf = ({ 
   slides 
 }: { 
-  slides: { title: string; desc: string; linkText: string; image: string }[];
+  slides: { title: string; desc: string; linkText: string; image: string; path: string }[];
 }) => {
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % slides.length);
   const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
@@ -41,7 +43,10 @@ const CarouselHalf = ({
         <p className="text-[#1f2022] text-sm mb-6 leading-relaxed font-normal">
           {currentSlide.desc}
         </p>
-        <button className="group flex items-center text-sm font-bold text-[#1f2022] hover:opacity-70 transition-opacity">
+        <button 
+          onClick={() => navigate(currentSlide.path)}
+          className="group flex items-center text-sm font-bold text-[#1f2022] hover:opacity-70 transition-opacity"
+        >
           {currentSlide.linkText}
           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
         </button>
@@ -84,7 +89,9 @@ const ColorHalf = ({
   desc,
   buttonText,
   illustration,
-  linkText
+  linkText,
+  onButtonClick,
+  onLinkClick
 }: {
   colorClass: string;
   title: React.ReactNode;
@@ -92,6 +99,8 @@ const ColorHalf = ({
   buttonText?: string;
   illustration: string;
   linkText?: string;
+  onButtonClick?: () => void;
+  onLinkClick?: () => void;
 }) => {
   return (
     <div className={`relative h-full min-h-[400px] p-8 sm:p-12 flex flex-col justify-between ${colorClass}`}>
@@ -104,13 +113,19 @@ const ColorHalf = ({
         </p>
         
         {buttonText && (
-          <Button className="bg-white text-primary hover:bg-gray-50 hover:text-primary font-bold rounded-full px-8 h-12 text-sm shadow-sm transition-transform hover:scale-105 w-fit">
+          <Button 
+            onClick={onButtonClick}
+            className="bg-white text-primary hover:bg-gray-50 hover:text-primary font-bold rounded-full px-8 h-12 text-sm shadow-sm transition-transform hover:scale-105 w-fit"
+          >
             {buttonText}
           </Button>
         )}
 
         {linkText && (
-           <button className="group flex items-center text-sm font-bold text-[#1f2022] hover:opacity-70 transition-opacity mt-6 w-fit">
+           <button 
+            onClick={onLinkClick}
+            className="group flex items-center text-sm font-bold text-[#1f2022] hover:opacity-70 transition-opacity mt-6 w-fit"
+           >
            {linkText}
            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
          </button>
@@ -128,30 +143,36 @@ const ColorHalf = ({
 };
 
 const ServiceCards = () => {
+  const navigate = useNavigate();
+
   const rentSlides = [
     {
       title: "Casas para alugar",
-      desc: "Aluguel de casas para morar bem com o HomeHub.",
+      desc: "Aluguel de casas para morar bem com a R7 Consultoria.",
       linkText: "Ver casas para alugar",
-      image: bgImage1
+      image: bgImage1,
+      path: "/imoveis?operation=rent&type=Casa"
     },
     {
       title: "Kitnets para alugar",
       desc: "Praticidade e economia em espaços compactos.",
       linkText: "Ver kitnets para alugar",
-      image: bgImage2
+      image: bgImage2,
+      path: "/imoveis?operation=rent&type=Kitnet/Studio"
     },
     {
       title: "Apartamentos com 2 quartos",
       desc: "Apartamentos com mais quartos para você e sua família.",
       linkText: "Ver apartamentos com 2 quartos",
-      image: bgImage3
+      image: bgImage3,
+      path: "/imoveis?operation=rent&type=Apartamento&bedrooms=2"
     },
     {
       title: "Apartamentos mobiliados",
       desc: "Mude-se sem preocupações. Imóveis prontos para morar.",
       linkText: "Ver imóveis mobiliados",
-      image: bgImage4
+      image: bgImage4,
+      path: "/imoveis?operation=rent&furnished=yes"
     }
   ];
 
@@ -160,19 +181,22 @@ const ServiceCards = () => {
       title: "Casas à venda",
       desc: "Encontre casas para comprar e tenha um cantinho só seu.",
       linkText: "Ver casas à venda",
-      image: bgImage5
+      image: bgImage5,
+      path: "/imoveis?operation=buy&type=Casa"
     },
     {
       title: "Apartamentos na planta",
       desc: "Invista no futuro. Lançamentos com condições especiais.",
       linkText: "Ver lançamentos",
-      image: bgImage6
+      image: bgImage6,
+      path: "/imoveis?operation=buy"
     },
      {
       title: "Coberturas à venda",
       desc: "Mais espaço e privacidade no topo do prédio.",
       linkText: "Ver coberturas",
-      image: bgImage2 // Reusing one for variation
+      image: bgImage2,
+      path: "/imoveis?operation=buy&type=Apartamento"
     }
   ];
 
@@ -190,8 +214,10 @@ const ServiceCards = () => {
               title={<>Alugar bem, sem <br/>complicação e <br/>fiador</>}
               desc="Agende visitas online, negocie sem intermediários e assine o contrato digitalmente. Sem fiador. Sem depósito caução. Sem filas."
               buttonText="Ver apartamentos para alugar"
-              linkText="Como alugar no HomeHub"
+              linkText="Como alugar na R7 Consultoria"
               illustration={illustrationRent}
+              onButtonClick={() => navigate("/imoveis?operation=rent&type=Apartamento")}
+              onLinkClick={() => navigate("/sobre")}
           />
         </div>
         
@@ -218,8 +244,10 @@ const ServiceCards = () => {
               title={<>Comprar seu <br/>imóvel e ter um <br/>cantinho só seu</>}
               desc="Conte com nossos consultores para conseguir as melhores taxas de financiamento, tirar todas as suas dúvidas e para qualquer suporte durante todo o processo."
               buttonText="Ver apartamentos à venda"
-              linkText="Como comprar no HomeHub"
+              linkText="Como comprar na R7 Consultoria"
               illustration={illustrationBuy}
+              onButtonClick={() => navigate("/imoveis?operation=buy&type=Apartamento")}
+              onLinkClick={() => navigate("/sobre")}
           />
         </div>
       </div>

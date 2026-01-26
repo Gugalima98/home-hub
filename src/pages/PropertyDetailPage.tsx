@@ -127,6 +127,27 @@ const PropertyDetailPage = () => {
   const unavailableItems = property.unavailable_items || [];
   const condoAmenities = property.condo_amenities || [];
 
+  // JSON-LD Schema
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": property.title,
+    "description": property.description,
+    "image": imageList,
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "BRL",
+      "price": property.price,
+      "priceValidUntil": "2025-12-31",
+      "availability": "https://schema.org/InStock",
+      "url": window.location.href
+    },
+    "brand": {
+      "@type": "Brand",
+      "name": "R7 Consultoria"
+    }
+  };
+
   if (showAllPhotos) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
@@ -172,6 +193,7 @@ const PropertyDetailPage = () => {
         title={property.title} 
         description={property.description ? `${property.description.substring(0, 150)}...` : property.title}
         image={imageList[0]}
+        schema={schema}
       />
       <Header />
 

@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import consorcioImage from "@/assets/consorcio-banner.jpg";
+import { useNavigate } from "react-router-dom";
 
 const ConsorcioBanner = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="container mx-auto px-4 py-12 mt-12">
       <div className="gradient-navy rounded-3xl overflow-hidden">
@@ -14,7 +17,10 @@ const ConsorcioBanner = () => {
             <p className="text-white/80 text-lg mb-6">
               Nossa missão é simplificar a jornada de encontrar o imóvel dos seus sonhos, combinando tecnologia de ponta com um atendimento humano e personalizado para oferecer a melhor experiência do mercado.
             </p>
-            <Button className="mt-4 bg-white text-primary hover:bg-white/90 rounded-xl">
+            <Button 
+              onClick={() => navigate('/sobre')}
+              className="mt-4 bg-white text-primary hover:bg-white/90 rounded-xl"
+            >
               Saiba mais
             </Button>
           </div>
