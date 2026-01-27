@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Map, List, Search, ChevronRight, Loader2 } from "lucide-react";
+import { Map, List, Search, ChevronRight, Loader2, SlidersHorizontal, Bell } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FilterBar from "@/components/FilterBar";
+import { FiltersSidebar } from "@/components/FiltersSidebar";
 import PropertyCard, { Property } from "@/components/PropertyCard";
 import MapComponent from "@/components/Map";
 import { SEO } from "@/components/SEO";
@@ -227,8 +228,62 @@ const PropertiesPage = () => {
         title="Imóveis para Alugar e Comprar em São Paulo" 
         description="Confira milhares de imóveis para alugar e comprar em São Paulo. Apartamentos, casas, studios e muito mais."
       />
-      <Header variant="search" />
-      <FilterBar />
+      {/* Desktop FilterBar */}
+      <div className="hidden lg:block">
+        <Header variant="search" />
+        <FilterBar />
+      </div>
+
+      {/* Mobile Header + Search Bar */}
+      <div className="lg:hidden sticky top-0 z-40 bg-white">
+        <Header />
+        <div className="bg-white border-b border-gray-100 shadow-sm">
+            <div className="px-4 py-4">
+                                        {/* Search Bar Container */}
+                                        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm mb-6">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold text-[#1f2022] truncate max-w-[200px]">
+                                                    {filters.searchLocation || "Qualquer lugar"}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    em {filters.searchLocation ? "São Paulo, SP" : "São Paulo, SP"}
+                                                    {filters.operationType === 'rent' ? ' - Alugar' : ' - Comprar'}
+                                                </span>
+                                            </div>
+                                            
+                                            <FiltersSidebar>
+                                                <button className="p-2 -mr-2 text-[#1f2022]">
+                                                    <SlidersHorizontal className="h-5 w-5" />
+                                                </button>
+                                            </FiltersSidebar>
+                                        </div>
+                            
+                                        {/* Horizontal Filter Chips */}
+                                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4">                    {["Apartamento", "Casa", "Kitnet/Studio", "Casa de condomínio"].map((type) => (
+                        <button
+                            key={type}
+                            onClick={() => {
+                              if (filters.propertyTypes.includes(type)) {
+                                setFilter("propertyTypes", filters.propertyTypes.filter(t => t !== type));
+                              } else {
+                                setFilter("propertyTypes", [...filters.propertyTypes, type]);
+                              }
+                            }}
+                            className={`
+                                whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-colors border
+                                ${filters.propertyTypes.includes(type)
+                                    ? "bg-[#1f2022] text-white border-[#1f2022]"
+                                    : "bg-[#f5f5f7] text-[#1f2022] border-[#f5f5f7]"
+                                }
+                            `}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+      </div>
 
       <div className="flex-1 flex relative">
         <div
@@ -403,9 +458,16 @@ const PropertiesPage = () => {
 
         <div
           className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
-            showMap ? "block" : "hidden lg:block"
+            showMap ? "block fixed inset-0 z-50 bg-background pt-[7.5rem] lg:pt-0 lg:relative lg:z-auto" : "hidden lg:block"
           }`}
         >
+            {/* Mobile Map Header to Close */}
+            {showMap && (
+                <div className="lg:hidden absolute top-0 left-0 w-full bg-white z-[60] p-4 flex items-center justify-between border-b shadow-sm">
+                    <span className="font-bold text-lg">Mapa</span>
+                    <Button variant="ghost" onClick={() => setShowMap(false)}>Fechar</Button>
+                </div>
+            )}
            <MapComponent 
             // @ts-ignore
             properties={filteredProperties} 
@@ -415,24 +477,25 @@ const PropertiesPage = () => {
            />
         </div>
 
-        <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-          <Button
-            onClick={() => setShowMap(!showMap)}
-            className="rounded-full shadow-xl px-6 py-6 bg-primary hover:bg-primary/90"
-          >
-            {showMap ? (
-              <>
-                <List className="h-5 w-5 mr-2" />
-                Ver lista
-              </>
-            ) : (
-              <>
-                <Map className="h-5 w-5 mr-2" />
-                Ver mapa
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Floating Action Buttons (Mobile Only) */}
+        {!showMap && (
+          <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex gap-3 w-max">
+             <Button
+                onClick={() => setShowMap(true)}
+                className="rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] h-11 px-6 bg-white hover:bg-gray-50 text-[#3b44c6] border border-gray-100 font-bold text-sm gap-2"
+              >
+                <Map className="h-4 w-4" />
+                Mostrar mapa
+              </Button>
+              
+              <Button
+                className="rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] h-11 px-6 bg-white hover:bg-gray-50 text-[#3b44c6] border border-gray-100 font-bold text-sm gap-2"
+              >
+                <Bell className="h-4 w-4" />
+                Criar alerta
+              </Button>
+          </div>
+        )}
       </div>
     </div>
   );
