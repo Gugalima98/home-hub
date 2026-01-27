@@ -8,12 +8,13 @@ import { Slider } from "@/components/ui/slider";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetFooter,
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useFilters } from "@/contexts/FilterContext";
+import { useNavigate } from "react-router-dom";
 
 interface FiltersSidebarProps {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ const FilterSectionTitle = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-base font-bold text-[#1f2022] mb-4">{children}</h3>
 );
 
-// Botão estilo "Pílula" (usado para sub-filtros como "Valor total")
+// Botão estilo "Pílula"
 const FilterPill = ({ 
   label, 
   active = false, 
@@ -78,12 +79,24 @@ const CounterPill = ({
 );
 
 // Helper para listas de Checkbox
-const CheckboxList = ({ options, idPrefix }: { options: string[], idPrefix: string }) => (
+const CheckboxList = ({ 
+  options, 
+  idPrefix,
+  selectedOptions,
+  onChange
+}: { 
+  options: string[], 
+  idPrefix: string,
+  selectedOptions: string[],
+  onChange: (option: string, checked: boolean) => void
+}) => (
   <div className="grid grid-cols-2 gap-y-5 gap-x-8">
     {options.map((option) => (
       <div key={option} className="flex items-center space-x-3 group cursor-pointer">
         <Checkbox
           id={`${idPrefix}-${option}`}
+          checked={selectedOptions.includes(option)}
+          onCheckedChange={(checked) => onChange(option, checked as boolean)}
           className="w-6 h-6 rounded-[6px] border-gray-300 data-[state=checked]:bg-[#3b44c6] data-[state=checked]:border-[#3b44c6] transition-all"
         />
         <Label
@@ -97,7 +110,7 @@ const CheckboxList = ({ options, idPrefix }: { options: string[], idPrefix: stri
   </div>
 );
 
-// --- Dados das Listas (Mantidos os que você pediu) ---
+// --- Dados das Listas ---
 
 const condominioOptions = [
   "Academia", "Área verde", "Brinquedoteca", "Churrasqueira", 
@@ -136,28 +149,60 @@ const acessibilidadeOptions = [
 ];
 
 export function FiltersSidebar({ children }: FiltersSidebarProps) {
-  const [operationType, setOperationType] = useState<"rent" | "buy">("rent");
-  const [priceType, setPriceType] = useState<"total" | "rent">("rent");
-  const [priceRange, setPriceRange] = useState([500, 25000]);
+  const { filters, setFilter, resetFilters } = useFilters();
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Preço inicial para o Slider se não houver filtro definido
+  const defaultMin = 500;
+  const defaultMax = 30000;
+
+  const handleOperationChange = (op: "rent" | "buy") => {
+    setFilter("operationType", op);
+    // Sync URL
+    const params = new URLSearchParams(window.location.search);
+    params.set("operation", op);
+    navigate({ search: params.toString() }, { replace: true });
+  };
+
+  const handlePropertyTypeToggle = (type: string, checked: boolean) => {
+    const currentTypes = filters.propertyTypes || [];
+    const newTypes = checked
+      ? [...currentTypes, type]
+      : currentTypes.filter((t) => t !== type);
+    setFilter("propertyTypes", newTypes);
+  };
+
+  const handleAmenityToggle = (amenity: string, checked: boolean) => {
+    const currentAmenities = filters.amenities || [];
+    const newAmenities = checked
+      ? [...currentAmenities, amenity]
+      : currentAmenities.filter((a) => a !== amenity);
+    setFilter("amenities", newAmenities);
+  };
+
+  const handleApplyFilters = () => {
+    setIsOpen(false);
+  };
 
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
       {/* Side="left" e largura ajustada */}
       <SheetContent side="left" className="w-full sm:w-[600px] sm:max-w-[600px] p-0 flex flex-col gap-0 border-r shadow-2xl overflow-hidden bg-white">
         
-        {/* Header - Layout Igual ao Print: X na esquerda, Toggle embaixo */}
+        {/* Header */}
         <div className="px-6 pt-6 pb-2 flex flex-col items-start gap-6 bg-white z-10">
           <SheetClose className="rounded-full p-1 hover:bg-gray-100 transition-colors">
              <X className="h-6 w-6 text-gray-500" />
           </SheetClose>
           
-          {/* Toggle Principal (Alugar/Comprar) - Estilo Sólido */}
+          {/* Toggle Principal (Alugar/Comprar) */}
            <div className="bg-[#f3f5f6] p-1 rounded-full flex relative w-fit">
               <button
-                onClick={() => setOperationType("rent")}
+                onClick={() => handleOperationChange("rent")}
                 className={`px-8 py-2 rounded-full text-sm font-bold transition-all ${
-                  operationType === "rent"
+                  filters.operationType === "rent"
                     ? "bg-[#3b44c6] text-white shadow-sm"
                     : "text-gray-500 hover:text-gray-900"
                 }`}
@@ -165,9 +210,9 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
                 Alugar
               </button>
               <button
-                onClick={() => setOperationType("buy")}
+                onClick={() => handleOperationChange("buy")}
                 className={`px-8 py-2 rounded-full text-sm font-bold transition-all ${
-                  operationType === "buy"
+                  filters.operationType === "buy"
                     ? "bg-[#3b44c6] text-white shadow-sm"
                     : "text-gray-500 hover:text-gray-900"
                 }`}
@@ -183,22 +228,19 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             
             {/* Valor */}
             <div>
-              <FilterSectionTitle>Valor</FilterSectionTitle>
-              {operationType === "rent" && (
-                <div className="flex gap-3 mb-6">
-                  <FilterPill label="Valor total" active={priceType === "total"} onClick={() => setPriceType("total")} />
-                  <FilterPill label="Aluguel" active={priceType === "rent"} onClick={() => setPriceType("rent")} />
-                </div>
-              )}
+              <FilterSectionTitle>Valor {filters.operationType === "rent" ? "(Mensal)" : "(Venda)"}</FilterSectionTitle>
+              
               <div className="flex gap-4 mb-8">
                 <div className="flex-1 space-y-1.5">
                   <Label className="text-xs font-bold text-[#1f2022]">Mínimo</Label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1f2022] text-sm">R$</span>
                     <Input 
-                      value={priceRange[0]} 
-                      onChange={(e) => setPriceRange([+e.target.value, priceRange[1]])} 
+                      type="number"
+                      value={filters.priceMin || ""} 
+                      onChange={(e) => setFilter("priceMin", e.target.value ? Number(e.target.value) : null)} 
                       className="pl-10 h-14 rounded-xl border-gray-300 text-base text-[#1f2022]" 
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -207,15 +249,27 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1f2022] text-sm">R$</span>
                     <Input 
-                      value={priceRange[1]} 
-                      onChange={(e) => setPriceRange([priceRange[0], +e.target.value])} 
+                      type="number"
+                      value={filters.priceMax || ""} 
+                      onChange={(e) => setFilter("priceMax", e.target.value ? Number(e.target.value) : null)} 
                       className="pl-10 h-14 rounded-xl border-gray-300 text-base text-[#1f2022]" 
+                      placeholder="Ilimitado"
                     />
                   </div>
                 </div>
               </div>
               <div className="px-2">
-                <Slider defaultValue={[500, 25000]} max={30000} step={100} value={priceRange} onValueChange={setPriceRange} className="py-2" />
+                <Slider 
+                  defaultValue={[defaultMin, defaultMax]} 
+                  max={30000} 
+                  step={100} 
+                  value={[filters.priceMin || defaultMin, filters.priceMax || defaultMax]} 
+                  onValueChange={(val) => {
+                    setFilter("priceMin", val[0]);
+                    setFilter("priceMax", val[1]);
+                  }} 
+                  className="py-2" 
+                />
               </div>
             </div>
 
@@ -229,6 +283,8 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
                   <div key={type} className="flex items-center space-x-3 group cursor-pointer">
                     <Checkbox
                       id={`type-${type}`}
+                      checked={filters.propertyTypes.includes(type)}
+                      onCheckedChange={(checked) => handlePropertyTypeToggle(type, checked as boolean)}
                       className="w-6 h-6 rounded-[6px] border-gray-300 data-[state=checked]:bg-[#3b44c6] data-[state=checked]:border-[#3b44c6] transition-all"
                     />
                     <Label
@@ -248,7 +304,14 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Quartos</FilterSectionTitle>
               <div className="flex gap-3">
-                {["1+", "2+", "3+", "4+"].map((num, i) => <CounterPill key={num} label={num} active={i === 0} />)}
+                {["1+", "2+", "3+", "4+"].map((num, i) => (
+                    <CounterPill 
+                        key={num} 
+                        label={num} 
+                        active={filters.bedrooms === (i + 1)} 
+                        onClick={() => setFilter("bedrooms", filters.bedrooms === (i + 1) ? null : (i + 1))} 
+                    />
+                ))}
               </div>
             </div>
 
@@ -258,8 +321,15 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Vagas de garagem</FilterSectionTitle>
               <div className="flex gap-3 items-center">
-                <FilterPill label="Tanto faz" active={true} className="h-12 px-6" />
-                {["1+", "2+", "3+"].map((num) => <CounterPill key={num} label={num} />)}
+                <FilterPill label="Tanto faz" active={filters.parkingSpots === null} onClick={() => setFilter("parkingSpots", null)} className="h-12 px-6" />
+                {["1+", "2+", "3+"].map((num, i) => (
+                    <CounterPill 
+                        key={num} 
+                        label={num} 
+                        active={filters.parkingSpots === (i + 1)} 
+                        onClick={() => setFilter("parkingSpots", i + 1)} 
+                    />
+                ))}
               </div>
             </div>
 
@@ -269,7 +339,15 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Banheiros</FilterSectionTitle>
               <div className="flex gap-3">
-                {["1+", "2+", "3+", "4+"].map((num) => <CounterPill key={num} label={num} />)}
+                <FilterPill label="Tanto faz" active={filters.bathrooms === null} onClick={() => setFilter("bathrooms", null)} className="h-12 px-6" />
+                {["1+", "2+", "3+"].map((num, i) => (
+                    <CounterPill 
+                        key={num} 
+                        label={num} 
+                        active={filters.bathrooms === (i + 1)} 
+                        onClick={() => setFilter("bathrooms", i + 1)} 
+                    />
+                ))}
               </div>
             </div>
 
@@ -282,14 +360,26 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
                 <div className="flex-1 space-y-1.5">
                   <Label className="text-xs font-bold text-[#1f2022]">Mínima</Label>
                   <div className="relative">
-                    <Input className="h-14 rounded-xl border-gray-300 text-base" placeholder="0" />
+                    <Input 
+                        type="number"
+                        className="h-14 rounded-xl border-gray-300 text-base" 
+                        placeholder="0" 
+                        value={filters.areaMin || ""}
+                        onChange={(e) => setFilter("areaMin", e.target.value ? Number(e.target.value) : null)}
+                    />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">m²</span>
                   </div>
                 </div>
                 <div className="flex-1 space-y-1.5">
                   <Label className="text-xs font-bold text-[#1f2022]">Máxima</Label>
                   <div className="relative">
-                    <Input className="h-14 rounded-xl border-gray-300 text-base" placeholder="Sem limite" />
+                    <Input 
+                        type="number"
+                        className="h-14 rounded-xl border-gray-300 text-base" 
+                        placeholder="Sem limite" 
+                        value={filters.areaMax || ""}
+                        onChange={(e) => setFilter("areaMax", e.target.value ? Number(e.target.value) : null)}
+                    />
                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">m²</span>
                   </div>
                 </div>
@@ -302,9 +392,9 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Mobiliado</FilterSectionTitle>
               <div className="flex gap-3">
-                <FilterPill label="Tanto faz" active={true} className="h-12 px-6" />
-                <FilterPill label="Sim" className="h-12 px-6" />
-                <FilterPill label="Não" className="h-12 px-6" />
+                <FilterPill label="Tanto faz" active={filters.furnished === "any"} onClick={() => setFilter("furnished", "any")} className="h-12 px-6" />
+                <FilterPill label="Sim" active={filters.furnished === "yes"} onClick={() => setFilter("furnished", "yes")} className="h-12 px-6" />
+                <FilterPill label="Não" active={filters.furnished === "no"} onClick={() => setFilter("furnished", "no")} className="h-12 px-6" />
               </div>
             </div>
 
@@ -314,9 +404,9 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Aceita pets</FilterSectionTitle>
               <div className="flex gap-3">
-                 <FilterPill label="Tanto faz" active={true} className="h-12 px-6" />
-                 <FilterPill label="Sim" className="h-12 px-6" />
-                 <FilterPill label="Não" className="h-12 px-6" />
+                 <FilterPill label="Tanto faz" active={filters.petFriendly === "any"} onClick={() => setFilter("petFriendly", "any")} className="h-12 px-6" />
+                 <FilterPill label="Sim" active={filters.petFriendly === "yes"} onClick={() => setFilter("petFriendly", "yes")} className="h-12 px-6" />
+                 <FilterPill label="Não" active={filters.petFriendly === "no"} onClick={() => setFilter("petFriendly", "no")} className="h-12 px-6" />
               </div>
             </div>
 
@@ -326,9 +416,9 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Próximo ao metrô</FilterSectionTitle>
               <div className="flex gap-3">
-                 <FilterPill label="Tanto faz" active={true} className="h-12 px-6" />
-                 <FilterPill label="Sim" className="h-12 px-6" />
-                 <FilterPill label="Não" className="h-12 px-6" />
+                 <FilterPill label="Tanto faz" active={filters.nearSubway === "any"} onClick={() => setFilter("nearSubway", "any")} className="h-12 px-6" />
+                 <FilterPill label="Sim" active={filters.nearSubway === "yes"} onClick={() => setFilter("nearSubway", "yes")} className="h-12 px-6" />
+                 <FilterPill label="Não" active={filters.nearSubway === "no"} onClick={() => setFilter("nearSubway", "no")} className="h-12 px-6" />
               </div>
             </div>
 
@@ -338,9 +428,9 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Disponibilidade</FilterSectionTitle>
               <div className="flex gap-3 flex-wrap">
-                 <FilterPill label="Tanto faz" active={true} className="h-12 px-6" />
-                 <FilterPill label="Imediata" className="h-12 px-6" />
-                 <FilterPill label="Em breve" className="h-12 px-6" />
+                 <FilterPill label="Tanto faz" active={filters.availability === "any"} onClick={() => setFilter("availability", "any")} className="h-12 px-6" />
+                 <FilterPill label="Imediata" active={filters.availability === "immediate"} onClick={() => setFilter("availability", "immediate")} className="h-12 px-6" />
+                 <FilterPill label="Em breve" active={filters.availability === "soon"} onClick={() => setFilter("availability", "soon")} className="h-12 px-6" />
               </div>
             </div>
 
@@ -350,7 +440,14 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             <div>
               <FilterSectionTitle>Suítes</FilterSectionTitle>
               <div className="flex gap-3">
-                {["1+", "2+", "3+", "4+"].map((num) => <CounterPill key={num} label={num} />)}
+                {["1+", "2+", "3+", "4+"].map((num, i) => (
+                    <CounterPill 
+                        key={num} 
+                        label={num} 
+                        active={filters.suites === (i + 1)} 
+                        onClick={() => setFilter("suites", i + 1)} 
+                    />
+                ))}
               </div>
             </div>
 
@@ -359,7 +456,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Condomínio */}
             <div>
               <FilterSectionTitle>Condomínio</FilterSectionTitle>
-              <CheckboxList options={condominioOptions} idPrefix="condominio" />
+              <CheckboxList options={condominioOptions} idPrefix="condominio" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -367,7 +464,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Comodidades */}
             <div>
               <FilterSectionTitle>Comodidades</FilterSectionTitle>
-              <CheckboxList options={comodidadesOptions} idPrefix="comodidades" />
+              <CheckboxList options={comodidadesOptions} idPrefix="comodidades" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -375,7 +472,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Mobílias */}
             <div>
               <FilterSectionTitle>Mobílias</FilterSectionTitle>
-              <CheckboxList options={mobiliasOptions} idPrefix="mobilias" />
+              <CheckboxList options={mobiliasOptions} idPrefix="mobilias" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -383,7 +480,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Bem-estar */}
             <div>
               <FilterSectionTitle>Bem-estar</FilterSectionTitle>
-              <CheckboxList options={bemEstarOptions} idPrefix="bemestar" />
+              <CheckboxList options={bemEstarOptions} idPrefix="bemestar" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -391,7 +488,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Eletrodomésticos */}
             <div>
               <FilterSectionTitle>Eletrodomésticos</FilterSectionTitle>
-              <CheckboxList options={eletrodomesticosOptions} idPrefix="eletro" />
+              <CheckboxList options={eletrodomesticosOptions} idPrefix="eletro" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -399,7 +496,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Cômodos */}
             <div>
               <FilterSectionTitle>Cômodos</FilterSectionTitle>
-              <CheckboxList options={comodosOptions} idPrefix="comodos" />
+              <CheckboxList options={comodosOptions} idPrefix="comodos" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -407,7 +504,7 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
             {/* Acessibilidade */}
             <div>
               <FilterSectionTitle>Acessibilidade</FilterSectionTitle>
-              <CheckboxList options={acessibilidadeOptions} idPrefix="acessibilidade" />
+              <CheckboxList options={acessibilidadeOptions} idPrefix="acessibilidade" selectedOptions={filters.amenities} onChange={handleAmenityToggle} />
             </div>
 
           </div>
@@ -415,11 +512,11 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
 
         {/* Footer */}
         <SheetFooter className="border-t p-6 bg-white sm:justify-between flex-row items-center gap-4 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <button className="text-[#3b44c6] text-sm font-bold hover:underline px-2">
-            Limpar
+          <button onClick={resetFilters} className="text-[#3b44c6] text-sm font-bold hover:underline px-2">
+            Limpar filtros
           </button>
-          <Button className="flex-1 bg-[#3b44c6] hover:bg-[#2a308c] h-12 rounded-lg font-bold text-base shadow-sm">
-            Ver 37.776 imóveis
+          <Button onClick={handleApplyFilters} className="flex-1 bg-[#3b44c6] hover:bg-[#2a308c] h-12 rounded-lg font-bold text-base shadow-sm">
+            Ver imóveis
           </Button>
         </SheetFooter>
       </SheetContent>

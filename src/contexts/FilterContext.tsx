@@ -12,6 +12,7 @@ interface FilterState {
   // Detalhes
   propertyTypes: string[]; // ["Apartamento", "Casa"]
   bedrooms: number | null; // 1, 2, 3, 4 (onde 4 significa 4+)
+  suites: number | null;
   bathrooms: number | null;
   parkingSpots: number | null;
   areaMin: number | null;
@@ -21,6 +22,7 @@ interface FilterState {
   furnished: string; // "yes", "no", "any"
   petFriendly: string; // "yes", "no", "any"
   nearSubway: string; // "yes", "no", "any"
+  availability: string; // "any", "immediate", "soon"
   
   // Arrays de Checkboxes
   amenities: string[]; // Academia, Piscina, etc.
@@ -39,6 +41,7 @@ const defaultFilters: FilterState = {
   priceMax: null,
   propertyTypes: [],
   bedrooms: null,
+  suites: null,
   bathrooms: null,
   parkingSpots: null,
   areaMin: null,
@@ -46,6 +49,7 @@ const defaultFilters: FilterState = {
   furnished: "any",
   petFriendly: "any",
   nearSubway: "any",
+  availability: "any",
   amenities: [],
 };
 

@@ -40,21 +40,57 @@ const PropertiesPage = () => {
 
   // Sync URL params to Filter Context on mount
   useEffect(() => {
+    // Operation
     const op = searchParams.get("operation");
-    const loc = searchParams.get("location");
-    const neigh = searchParams.get("neighborhood");
-
     if (op && (op === 'rent' || op === 'buy')) {
-      // Only update if different to avoid loops if context updates URL later
-      if (filters.operationType !== op) {
-        setFilter("operationType", op);
-      }
+      if (filters.operationType !== op) setFilter("operationType", op);
     }
 
+    // Location
+    const loc = searchParams.get("location");
+    const neigh = searchParams.get("neighborhood");
     const targetLocation = neigh || loc;
     if (targetLocation && filters.searchLocation !== targetLocation) {
         setFilter("searchLocation", targetLocation);
     }
+
+    // Property Type
+    const type = searchParams.get("type");
+    if (type) {
+      // Assuming single type for now, or check if it's already in the array
+      // If the URL has type=Apartamento, we want filters.propertyTypes to be ["Apartamento"]
+      const types = type.split(","); // Support comma separated
+      if (JSON.stringify(filters.propertyTypes) !== JSON.stringify(types)) {
+         setFilter("propertyTypes", types);
+      }
+    }
+
+    // Numeric Filters
+    const priceMin = searchParams.get("priceMin");
+    if (priceMin) setFilter("priceMin", Number(priceMin));
+
+    const priceMax = searchParams.get("priceMax");
+    if (priceMax) setFilter("priceMax", Number(priceMax));
+
+    const bedrooms = searchParams.get("bedrooms");
+    if (bedrooms) setFilter("bedrooms", Number(bedrooms));
+    
+    const bathrooms = searchParams.get("bathrooms");
+    if (bathrooms) setFilter("bathrooms", Number(bathrooms));
+
+    const parkingSpots = searchParams.get("parkingSpots");
+    if (parkingSpots) setFilter("parkingSpots", Number(parkingSpots));
+
+    // Boolean/String Filters
+    const furnished = searchParams.get("furnished");
+    if (furnished) setFilter("furnished", furnished);
+
+    const petFriendly = searchParams.get("petFriendly");
+    if (petFriendly) setFilter("petFriendly", petFriendly);
+
+    const nearSubway = searchParams.get("nearSubway");
+    if (nearSubway) setFilter("nearSubway", nearSubway);
+
   }, [searchParams]); // Run when URL params change
 
   useEffect(() => {
@@ -93,6 +129,24 @@ const PropertiesPage = () => {
 
       if (filters.parkingSpots) {
         query = query.gte("parking_spots", filters.parkingSpots);
+      }
+
+      if (filters.suites) {
+        query = query.gte("suites", filters.suites);
+      }
+
+      if (filters.areaMin) {
+        query = query.gte("area", filters.areaMin);
+      }
+
+      if (filters.areaMax) {
+        query = query.lte("area", filters.areaMax);
+      }
+
+      // Availability logic (assuming status or specific field)
+      if (filters.availability === "immediate") {
+        // Example logic: status is active and available_from is null or past
+        // For now, assuming standard active status covers immediate availability unless specified otherwise
       }
 
       if (filters.propertyTypes.length > 0) {
