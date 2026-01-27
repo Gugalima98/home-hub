@@ -20,6 +20,7 @@ O objetivo é construir uma plataforma imobiliária de alta fidelidade visual e 
     *   Tabela `properties`: Schema robusto (JSONB para imagens, geolocalização).
     *   Tabela `seo_cities`: Gerenciamento dinâmico de links de cidades e rodapé para SEO.
 *   **Storage:** Bucket `property-images` configurado.
+*   **Deploy:** Configurado na Vercel com variáveis de ambiente seguras e regras de rota (`vercel.json`, `.npmrc`).
 
 ### 2.2. CMS (Painel Administrativo - `/admin`)
 *   **Estrutura:** Layout exclusivo, separado do painel do usuário.
@@ -28,17 +29,19 @@ O objetivo é construir uma plataforma imobiliária de alta fidelidade visual e 
 *   **Gestão de Usuários:** Listagem e controle de permissões.
 
 ### 2.3. Frontend Público (Home & Navegação)
-*   **Home Page (`/`):** Totalmente funcional e conectada.
-    *   **Hero:** Busca real de cidades/bairros com imóveis disponíveis.
-    *   **Sobre:** Link para página institucional.
-    *   **Serviços:** Carrossel e cards levando para filtros específicos (ex: "Apartamentos 2 quartos").
-    *   **Cidades & Rodapé:** Conteúdo dinâmico vindo do banco (`seo_cities`).
+*   **Home Page (`/`):** Totalmente funcional e responsiva (Mobile-First).
+    *   **Hero:** Busca otimizada para mobile com card centralizado.
+    *   **Header:** Menu lateral (Sheet) implementado para mobile.
+    *   **Serviços:** Cards adaptáveis (ocultam ilustrações no mobile para limpeza visual).
+    *   **Cidades:** Slider de cidades com snap e layout fluido (85vw) no mobile.
+*   **Listagem (`/imoveis`):**
+    *   **Mobile UI (QuintoAndar Style):** Header fixo com busca e chips de filtros horizontais. Botões flutuantes para Mapa e Alertas.
+    *   **Filtros:** Sidebar (`FiltersSidebar`) integrada e funcional no mobile.
+    *   **Mapa Interativo:** Alternância fluida entre lista e mapa.
 *   **Páginas Institucionais:**
     *   `About` (/sobre), `Contact` (/contato), `Blog` (/blog), `BlogPost` (artigos individuais).
     *   **Jurídico:** `Privacy`, `Cookies`, `Terms`, `Sitemap`.
-*   **Listagem (`/imoveis`):** Filtros, Mapa Interativo e Cards conectados ao Supabase.
-*   **Detalhes (`/imovel/...`):** Galeria de fotos, mapa estático, e **Schema.org Product** para SEO.
-*   **UX:** ScrollToTop implementado (rola para o topo ao navegar).
+*   **UX:** ScrollToTop implementado.
 
 ---
 
@@ -61,7 +64,7 @@ O objetivo é construir uma plataforma imobiliária de alta fidelidade visual e 
 *   [ ] Exibir estatísticas reais (visualizações, mensagens).
 
 ### 3.3. Refinamento de Filtros
-*   [ ] **Sidebar "Mais Filtros":** Conectar totalmente o `FiltersSidebar` ao `FilterContext`. Atualmente os checkboxes visuais não alteram a query.
+*   [ ] **Validação Completa:** Garantir que todos os filtros do Sidebar (complexos) estejam refletindo na query do Supabase corretamente em todos os cenários.
 
 ---
 
