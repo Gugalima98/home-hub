@@ -94,12 +94,12 @@ const CitiesSection = () => {
           ) : (
             <div 
               ref={scrollContainerRef}
-              className="flex overflow-x-auto gap-8 pb-4 scrollbar-hide snap-x"
+              className="flex overflow-x-auto gap-4 md:gap-8 pb-4 scrollbar-hide snap-x px-4 md:px-0 -mx-4 md:mx-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {currentData.map((cityData, index) => (
-                <div key={`${cityData.city}-${index}`} className="min-w-[280px] flex-1 snap-start border-r border-gray-100 last:border-0 pr-8">
-                  <h3 className="text-2xl font-bold text-[#3b44c6] mb-6 whitespace-nowrap">
+                <div key={`${cityData.city}-${index}`} className="min-w-[85vw] md:min-w-[280px] flex-1 snap-center md:snap-start border-r-0 md:border-r border-gray-100 last:border-0 md:pr-8">
+                  <h3 className="text-2xl font-bold text-[#3b44c6] mb-6">
                     {cityData.city}
                   </h3>
                   <ul className="space-y-3">
@@ -107,7 +107,7 @@ const CitiesSection = () => {
                       <li key={idx}>
                         <a
                           href={link.url}
-                          className="text-sm text-gray-600 hover:text-[#3b44c6] hover:underline transition-colors block leading-relaxed"
+                          className="text-sm text-gray-600 hover:text-[#3b44c6] hover:underline transition-colors block leading-relaxed break-words"
                         >
                           {link.label}
                         </a>

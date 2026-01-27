@@ -26,18 +26,18 @@ const CarouselHalf = ({
   const currentSlide = slides[currentIndex];
 
   return (
-    <div className="relative h-full min-h-[400px] group overflow-hidden bg-gray-100">
+    <div className="relative h-[400px] lg:h-full w-full group overflow-hidden bg-gray-100">
       {/* Background Image - Full Cover - Dynamic per slide */}
       <div 
-        key={currentIndex} // Force re-render for animation if needed, or rely on style update
+        key={currentIndex} 
         className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out group-hover:scale-105"
         style={{ backgroundImage: `url(${currentSlide.image})` }}
       />
       <div className="absolute inset-0 bg-black/10" />
 
-      {/* Floating White Card - Compact & Square-ish */}
-      <div className="absolute top-0 left-0 sm:top-8 sm:left-8 bg-white p-6 sm:p-8 w-full sm:w-[320px] shadow-sm z-20">
-        <h3 className="text-2xl font-bold text-[#1f2022] mb-3 leading-tight tracking-tight">
+      {/* Floating White Card */}
+      <div className="absolute top-6 left-6 right-6 sm:top-8 sm:left-8 sm:right-auto sm:w-[320px] bg-white p-6 sm:p-8 shadow-sm z-20 rounded-xl sm:rounded-none">
+        <h3 className="text-xl sm:text-2xl font-bold text-[#1f2022] mb-3 leading-tight tracking-tight">
           {currentSlide.title}
         </h3>
         <p className="text-[#1f2022] text-sm mb-6 leading-relaxed font-normal">
@@ -53,23 +53,23 @@ const CarouselHalf = ({
       </div>
 
       {/* Navigation Buttons (Floating on image - Bottom Right) */}
-      <div className="absolute bottom-12 right-8 flex gap-3 z-20">
+      <div className="absolute bottom-8 right-8 flex gap-3 z-20">
         <button 
           onClick={prevSlide}
-          className="w-12 h-12 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-md transition-transform active:scale-95 text-[#1f2022]"
+          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-md transition-transform active:scale-95 text-[#1f2022]"
         >
-          <ChevronLeft className="h-6 w-6" />
+          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
         <button 
           onClick={nextSlide}
-          className="w-12 h-12 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-md transition-transform active:scale-95 text-[#1f2022]"
+          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-md transition-transform active:scale-95 text-[#1f2022]"
         >
-          <ChevronRight className="h-6 w-6" />
+          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
       </div>
 
       {/* Segmented Progress Bar - Bottom Full Width */}
-      <div className="absolute bottom-6 left-8 right-8 flex gap-2 z-20">
+      <div className="absolute bottom-4 left-8 right-8 flex gap-2 z-20">
         {slides.map((_, index) => (
           <div 
             key={index}
@@ -105,17 +105,17 @@ const ColorHalf = ({
   return (
     <div className={`relative h-full min-h-[400px] p-8 sm:p-12 flex flex-col justify-between ${colorClass}`}>
       <div className="relative z-10 max-w-[400px]">
-        <h3 className="text-3xl sm:text-[2.5rem] leading-[1.1] font-bold text-[#1f2022] mb-4 tracking-tight">
+        <h3 className="text-2xl sm:text-3xl lg:text-[2.5rem] leading-[1.1] font-bold text-[#1f2022] mb-4 tracking-tight">
           {title}
         </h3>
-        <p className="text-[#1f2022] text-base leading-relaxed mb-8 max-w-[90%]">
+        <p className="text-[#1f2022] text-sm sm:text-base leading-relaxed mb-8 max-w-[90%]">
           {desc}
         </p>
         
         {buttonText && (
           <Button 
             onClick={onButtonClick}
-            className="bg-white text-primary hover:bg-gray-50 hover:text-primary font-bold rounded-full px-8 h-12 text-sm shadow-sm transition-transform hover:scale-105 w-fit"
+            className="bg-white text-primary hover:bg-gray-50 hover:text-primary font-bold rounded-full px-6 sm:px-8 h-10 sm:h-12 text-xs sm:text-sm shadow-sm transition-transform hover:scale-105 w-fit"
           >
             {buttonText}
           </Button>
@@ -136,7 +136,7 @@ const ColorHalf = ({
       <img
         src={illustration}
         alt="Ilustração"
-        className="absolute bottom-0 right-0 sm:right-8 w-[240px] sm:w-[320px] object-contain pointer-events-none"
+        className="hidden lg:block absolute bottom-0 right-8 w-[320px] object-contain pointer-events-none"
       />
     </div>
   );
@@ -201,14 +201,14 @@ const ServiceCards = () => {
   ];
 
   return (
-    <section className="container mx-auto px-4 py-16 space-y-12">
+    <section className="container mx-auto px-4 py-8 md:py-16 space-y-8 md:space-y-12">
       
       {/* 
         BLOCK 1: Alugar (Roxo Esq 8 cols + Foto Dir 4 cols)
       */}
-      <div className="rounded-[2.5rem] overflow-hidden grid lg:grid-cols-12 min-h-[480px]">
+      <div className="rounded-[2.5rem] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-auto lg:min-h-[480px]">
         {/* Left Side: Solid Color (WIDER) */}
-        <div className="lg:col-span-8 h-full">
+        <div className="lg:col-span-8 h-full order-1 lg:order-1">
           <ColorHalf 
               colorClass="bg-[#E1D6E6]" 
               title={<>Alugar bem, sem <br/>complicação e <br/>fiador</>}
@@ -222,7 +222,7 @@ const ServiceCards = () => {
         </div>
         
         {/* Right Side: Image with Floating Card (NARROWER) */}
-        <div className="lg:col-span-4 h-full">
+        <div className="lg:col-span-4 h-full order-2 lg:order-2">
           <CarouselHalf 
               slides={rentSlides}
           />
@@ -232,13 +232,13 @@ const ServiceCards = () => {
       {/* 
         BLOCK 2: Comprar (Foto Esq 4 cols + Verde Dir 8 cols)
       */}
-      <div className="rounded-[2.5rem] overflow-hidden grid lg:grid-cols-12 min-h-[480px]">
-        <div className="lg:col-span-4 h-full">
+      <div className="rounded-[2.5rem] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-auto lg:min-h-[480px]">
+        <div className="lg:col-span-4 h-full order-2 lg:order-1">
           <CarouselHalf 
               slides={buySlides}
           />
         </div>
-        <div className="lg:col-span-8 h-full">
+        <div className="lg:col-span-8 h-full order-1 lg:order-2">
           <ColorHalf 
               colorClass="bg-[#D3DCC8]" 
               title={<>Comprar seu <br/>imóvel e ter um <br/>cantinho só seu</>}

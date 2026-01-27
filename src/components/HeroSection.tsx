@@ -163,94 +163,94 @@ const HeroSection = () => {
         <div className="absolute inset-0 bg-black/20" />
       </div>
       
-      <div className="container relative z-10 mx-auto">
-                  {/* Search Card */}
-                <div className="w-full max-w-[480px] rounded-2xl bg-white p-6 shadow-xl space-y-6 ml-0 md:ml-12 lg:ml-20 mt-12">
-                  {/* Top Toggle */}
-                  <div className="flex w-fit bg-gray-100 rounded-full p-1">
-                    <button
-                      onClick={() => setSearchType("buscar")}
-                      className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-                        searchType === "buscar" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Buscar Imóveis
-                    </button>
-                    <button
-                      onClick={() => setSearchType("anunciar")}
-                      className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-                        searchType === "anunciar" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      Anunciar Imóveis
-                    </button>
-                  </div>
-        
-                  {/* Title */}
-                  <div className="space-y-2 text-left">
-                    <h1 className="text-4xl md:text-[2.75rem] leading-[1.1] font-bold text-[#1f2022] tracking-tight">
-                      Alugue um lar
-                      <br />
-                      para chamar de seu
-                    </h1>
-                  </div>
-        
-                  {/* Rent/Buy Tabs */}
-                  <div className="flex justify-start gap-6 border-b border-gray-200">
-                      <button 
-                          onClick={() => setRentOrBuy('rent')}
-                          className={`text-sm font-medium pb-3 transition-all relative ${
-                            rentOrBuy === 'rent' 
-                              ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
-                              : 'text-gray-500 hover:text-gray-800'
-                          }`}
-                      >
-                          Alugar
-                      </button>
-                      <button 
-                          onClick={() => setRentOrBuy('buy')}
-                          className={`text-sm font-medium pb-3 transition-all relative ${
-                            rentOrBuy === 'buy' 
-                              ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
-                              : 'text-gray-500 hover:text-gray-800'
-                          }`}
-                      >
-                          Comprar
-                      </button>
-                  </div>
-        
-                  {/* Form */}
-                  <div className="space-y-3">
-                      <CustomSelect 
-                        icon={<MapPin size={20}/>} 
-                        label="Cidade" 
-                        placeholder={loadingLocations ? "Carregando..." : "Busque por cidade"} 
-                        items={cityItems} 
-                        onValueChange={setSelectedCity} 
-                        value={selectedCity}
-                        disabled={loadingLocations || cityItems.length === 0}
-                      />
-                      <CustomSelect 
-                        icon={<Home size={20}/>} 
-                        label="Bairro" 
-                        placeholder="Busque por bairro" 
-                        items={neighborhoodItems} 
-                        onValueChange={setSelectedNeighborhood} 
-                        value={selectedNeighborhood} 
-                        disabled={!selectedCity || neighborhoodItems.length === 0} 
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                          <CustomSelect icon={<Wallet size={20}/>} label="Valor total até" placeholder="Escolha o valor" items={valueItems} />
-                          <CustomSelect icon={<BedDouble size={20}/>} label="Quartos" placeholder="Nº de quartos" items={roomItems} />
-                      </div>
-                  </div>
-        
-                  {/* Search Button */}
-                  <Button onClick={handleSearch} className="w-full h-12 text-base font-semibold rounded-lg bg-primary hover:bg-primary/90 shadow-md">
-                    Buscar imóveis
-                  </Button>
-                </div>
+      <div className="container relative z-10 mx-auto px-4 md:px-0">
+          {/* Search Card */}
+        <div className="w-full max-w-[480px] rounded-2xl bg-white p-4 md:p-6 shadow-xl space-y-4 md:space-y-6 mx-auto md:ml-12 lg:ml-20 mt-8 md:mt-12">
+          {/* Top Toggle */}
+          <div className="flex w-fit bg-gray-100 rounded-full p-1 mx-auto md:mx-0">
+            <button
+              onClick={() => setSearchType("buscar")}
+              className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-semibold transition-all ${
+                searchType === "buscar" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Buscar Imóveis
+            </button>
+            <button
+              onClick={() => setSearchType("anunciar")}
+              className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-semibold transition-all ${
+                searchType === "anunciar" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Anunciar Imóveis
+            </button>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-2 text-center md:text-left">
+            <h1 className="text-3xl md:text-[2.75rem] leading-[1.1] font-bold text-[#1f2022] tracking-tight">
+              Alugue um lar
+              <br className="hidden md:block" />
+              {" "}para chamar de seu
+            </h1>
+          </div>
+
+          {/* Rent/Buy Tabs */}
+          <div className="flex justify-center md:justify-start gap-6 border-b border-gray-200">
+              <button 
+                  onClick={() => setRentOrBuy('rent')}
+                  className={`text-sm font-medium pb-3 transition-all relative ${
+                    rentOrBuy === 'rent' 
+                      ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+              >
+                  Alugar
+              </button>
+              <button 
+                  onClick={() => setRentOrBuy('buy')}
+                  className={`text-sm font-medium pb-3 transition-all relative ${
+                    rentOrBuy === 'buy' 
+                      ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+              >
+                  Comprar
+              </button>
+          </div>
+
+          {/* Form */}
+          <div className="space-y-3">
+              <CustomSelect 
+                icon={<MapPin size={20}/>} 
+                label="Cidade" 
+                placeholder={loadingLocations ? "Carregando..." : "Busque por cidade"} 
+                items={cityItems} 
+                onValueChange={setSelectedCity} 
+                value={selectedCity}
+                disabled={loadingLocations || cityItems.length === 0}
+              />
+              <CustomSelect 
+                icon={<Home size={20}/>} 
+                label="Bairro" 
+                placeholder="Busque por bairro" 
+                items={neighborhoodItems} 
+                onValueChange={setSelectedNeighborhood} 
+                value={selectedNeighborhood} 
+                disabled={!selectedCity || neighborhoodItems.length === 0} 
+              />
+              <div className="grid grid-cols-2 gap-3">
+                  <CustomSelect icon={<Wallet size={20}/>} label="Valor total até" placeholder="Escolha o valor" items={valueItems} />
+                  <CustomSelect icon={<BedDouble size={20}/>} label="Quartos" placeholder="Nº de quartos" items={roomItems} />
               </div>
+          </div>
+
+          {/* Search Button */}
+          <Button onClick={handleSearch} className="w-full h-12 text-base font-semibold rounded-lg bg-primary hover:bg-primary/90 shadow-md">
+            Buscar imóveis
+          </Button>
+        </div>
+      </div>
             </section>
           );
         };
