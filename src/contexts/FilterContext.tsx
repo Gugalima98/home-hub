@@ -31,6 +31,7 @@ interface FilterState {
 interface FilterContextType {
   filters: FilterState;
   setFilter: (key: keyof FilterState, value: any) => void;
+  setManyFilters: (newFilters: Partial<FilterState>) => void;
   resetFilters: () => void;
 }
 
@@ -62,12 +63,16 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const setManyFilters = (newFilters: Partial<FilterState>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+  };
+
   const resetFilters = () => {
     setFilters(defaultFilters);
   };
 
   return (
-    <FilterContext.Provider value={{ filters, setFilter, resetFilters }}>
+    <FilterContext.Provider value={{ filters, setFilter, setManyFilters, resetFilters }}>
       {children}
     </FilterContext.Provider>
   );

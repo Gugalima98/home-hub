@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import locationsData from '@/data/locations.json';
 
 export interface LocationSuggestion {
   name: string;
@@ -12,44 +13,8 @@ export interface LocationSuggestion {
   raw_state?: string;
 }
 
+// Helper para normalizar texto (remove acentos)
 const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-// Fallback manual list for major neighborhoods ensuring they always appear
-const MAJOR_NEIGHBORHOODS: Record<string, string[]> = {
-  "AC": ["Centro", "Bosque", "Estação Experimental", "Ipê"], // Rio Branco
-  "AL": ["Ponta Verde", "Pajuçara", "Jatiúca", "Farol"], // Maceió
-  "AP": ["Centro", "Trem", "Santa Rita", "Cabralzinho"], // Macapá
-  "AM": ["Ponta Negra", "Adrianópolis", "Vieiralves", "Parque 10"], // Manaus
-  "BA": ["Barra", "Pituba", "Rio Vermelho", "Ondina", "Graça", "Horto Florestal", "Caminho das Árvores", "Itaigara"], // Salvador
-  "CE": ["Meireles", "Aldeota", "Cocó", "Varjota", "Mucuripe", "Praia de Iracema"], // Fortaleza
-  "DF": ["Asa Sul", "Asa Norte", "Lago Sul", "Lago Norte", "Sudoeste", "Noroeste", "Águas Claras"], // Brasília
-  "ES": ["Praia do Canto", "Jardim da Penha", "Mata da Praia", "Jardim Camburi"], // Vitória
-  "GO": ["Setor Bueno", "Setor Marista", "Setor Oeste", "Jardim Goiás"], // Goiânia
-  "MA": ["Ponta d'Areia", "Renascença", "Calhau", "São Francisco"], // São Luís
-  "MT": ["Goiabeiras", "Popular", "Jardim das Américas", "Duque de Caxias"], // Cuiabá
-  "MS": ["Chácara Cachoeira", "Jardim dos Estados", "Santa Fé", "Centro"], // Campo Grande
-  "MG": ["Savassi", "Lourdes", "Belvedere", "Funcionários", "Sion", "Anchieta", "Mangabeiras", "Pampulha", "Centro"], // Belo Horizonte
-  "PA": ["Umarizal", "Nazaré", "Batista Campos", "Marco"], // Belém
-  "PB": ["Manaíra", "Tambaú", "Cabo Branco", "Bessa"], // João Pessoa
-  "PR": ["Batel", "Água Verde", "Bigorrilho", "Centro Cívico", "Ecoville", "Santa Felicidade"], // Curitiba
-  "PE": ["Boa Viagem", "Pina", "Espinheiro", "Casa Forte", "Jaqueira", "Graças", "Derby"], // Recife
-  "PI": ["Jockey", "Fátima", "Ininga", "São Cristóvão"], // Teresina
-  "RJ": [
-    "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Botafogo", "Tijuca", "Flamengo", 
-    "Laranjeiras", "Centro", "Recreio dos Bandeirantes", "Jacarepaguá", "Méier", "Madureira", "Grajaú"
-  ],
-  "RN": ["Ponta Negra", "Tirol", "Petrópolis", "Capim Macio"], // Natal
-  "RS": ["Moinhos de Vento", "Bela Vista", "Menino Deus", "Bom Fim", "Cidade Baixa", "Centro Histórico"], // Porto Alegre
-  "RO": ["Olaria", "Embratel", "Nova Porto Velho", "Centro"], // Porto Velho
-  "RR": ["Centro", "São Francisco", "Aparecida", "Paraviana"], // Boa Vista
-  "SC": ["Centro", "Agronômica", "Trindade", "Coqueiros", "Itacorubi", "Jurerê Internacional", "Campeche"], // Florianópolis
-  "SP": [
-    "Vila Mariana", "Pinheiros", "Moema", "Perdizes", "Itaim Bibi", "Jardins", "Paulista",
-    "Brooklin", "Vila Madalena", "Tatuapé", "Morumbi", "Higienópolis"
-  ],
-  "SE": ["Atalaia", "Jardins", "Grageru", "13 de Julho"], // Aracaju
-  "TO": ["Plano Diretor Sul", "Plano Diretor Norte", "Graciosa"], // Palmas
-};
 
 export const useLocations = () => {
   const [activeStates, setActiveStates] = useState<string[]>([]);
@@ -77,40 +42,48 @@ export const useLocations = () => {
 
     let results: LocationSuggestion[] = [];
 
-    // 1. Manual List Search (ALL STATES)
-    // We iterate over ALL keys in MAJOR_NEIGHBORHOODS to ensure complete coverage.
-    // Capital mapping is manual/implied for simplicity in this fallback list.
-    const capitals: Record<string, string> = {
-        "AC": "Rio Branco", "AL": "Maceió", "AP": "Macapá", "AM": "Manaus", "BA": "Salvador",
-        "CE": "Fortaleza", "DF": "Brasília", "ES": "Vitória", "GO": "Goiânia", "MA": "São Luís",
-        "MT": "Cuiabá", "MS": "Campo Grande", "MG": "Belo Horizonte", "PA": "Belém", "PB": "João Pessoa",
-        "PR": "Curitiba", "PE": "Recife", "PI": "Teresina", "RJ": "Rio de Janeiro", "RN": "Natal",
-        "RS": "Porto Alegre", "RO": "Porto Velho", "RR": "Boa Vista", "SC": "Florianópolis",
-        "SP": "São Paulo", "SE": "Aracaju", "TO": "Palmas"
-    };
+    // 1. Local JSON Search (locations.json - Full Brazil Database)
+    // Structure: { "UF": { "City": ["Neighborhood", ...] } }
+    
+    try {
+        Object.entries(locationsData).forEach(([uf, cities]) => {
+            Object.entries(cities).forEach(([city, neighborhoods]) => {
+                // Check City Match
+                if (normalize(city).includes(normalizedQuery)) {
+                     // Check context if present (optional filtering)
+                     if (!cleanContext || normalize(city).includes(cleanContext)) {
+                         results.push({
+                            name: city,
+                            type: "Cidade",
+                            city: city,
+                            state: uf,
+                            display_name: `${city} - ${uf}`,
+                            raw_state: uf
+                         });
+                     }
+                }
 
-    Object.keys(MAJOR_NEIGHBORHOODS).forEach(uf => {
-       const neighborhoods = MAJOR_NEIGHBORHOODS[uf] || [];
-       neighborhoods.forEach(neigh => {
-          if (normalize(neigh).includes(normalizedQuery)) {
-             const city = capitals[uf] || "Capital";
-             
-             // Context filter logic (optional but good for relevance)
-             if (cleanContext && !normalize(city).includes(cleanContext)) return;
+                // Check Neighborhoods
+                // Casting neighborhoods as string[] because the JSON structure guarantees it
+                (neighborhoods as string[]).forEach(neigh => {
+                    if (normalize(neigh).includes(normalizedQuery)) {
+                        results.push({
+                            name: neigh,
+                            type: "Bairro",
+                            city: city,
+                            state: uf,
+                            display_name: `${neigh}, ${city} - ${uf}`,
+                            raw_state: uf
+                        });
+                    }
+                });
+            });
+        });
+    } catch (err) {
+        console.error("Error parsing local locations data:", err);
+    }
 
-             results.push({
-                name: neigh,
-                type: "Bairro",
-                city: city,
-                state: uf,
-                display_name: `${neigh}, ${city} - ${uf}`,
-                raw_state: uf
-             });
-          }
-       });
-    });
-
-    // 2. Nominatim API Search (Broad coverage)
+    // 2. Nominatim API Search (Broad coverage fallback)
     try {
       const cleanContext = priorityContext ? normalize(priorityContext.split("-")[0].trim()) : "";
       
@@ -122,9 +95,6 @@ export const useLocations = () => {
 
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=br&addressdetails=1&limit=50&dedupe=1`;
       
-      console.log("Searching Nominatim:", url);
-      console.log("Context:", priorityContext, "Cleaned:", cleanContext);
-
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'HomeHub-RealEstate/1.0'
@@ -132,7 +102,6 @@ export const useLocations = () => {
       });
 
       const data = await response.json();
-      console.log("Nominatim Raw Results:", data);
 
       const stateMap: Record<string, string> = {
         "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM", "Bahia": "BA", "Ceará": "CE",
@@ -191,8 +160,6 @@ export const useLocations = () => {
       
       apiResults.forEach((item: LocationSuggestion) => {
          const key = normalize(item.name + item.city);
-         // Basic dedupe: if we already have "Tijuca" in "Rio", skip API version if it's less detailed? 
-         // Actually, manual list is safer, so keep manual.
          if (!existingNames.has(key)) {
              results.push(item);
          }
@@ -205,8 +172,7 @@ export const useLocations = () => {
 
     // FINAL FILTERING & SORTING
     const finalResults = results.filter((item: any) => {
-          // Rule 1: For Cities, query must match the name directly (e.g. searching "Rio" shows "Rio de Janeiro")
-          // If searching "Tijuca", don't show "Rio de Janeiro" just because it's the parent city
+          // Rule 1: For Cities, query must match the name directly
           if (item.type === "Cidade") {
               return normalize(item.name).includes(normalizedQuery);
           }

@@ -82,15 +82,28 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
   return null;
 }
 
-// Component to update map center/bounds only on initial load
-function MapUpdater({ properties }: { properties: Property[] }) {
+// Component to update map center/bounds dynamically
+function MapUpdater({ properties, centerCoordinates }: { properties: Property[], centerCoordinates?: [number, number] | null }) {
   const map = useMapEvents({});
-  const hasInitialFocus = useRef(false);
+  const lastCenterRef = useRef<string | null>(null);
   
   useEffect(() => {
-    // Only focus if we have properties and coordinates are valid
-    // Property interface expects coordinates as [number, number] if mapped correctly
-    if (!hasInitialFocus.current && properties.length > 0) {
+    // 1. Priority: Explicit Center Coordinates (from Search)
+    if (centerCoordinates) {
+      const coordKey = `${centerCoordinates[0]},${centerCoordinates[1]}`;
+      // Only fly if coordinates actually changed
+      if (lastCenterRef.current !== coordKey) {
+        lastCenterRef.current = coordKey;
+        map.flyTo(centerCoordinates, 15, {
+          animate: true,
+          duration: 1.5
+        });
+      }
+      return;
+    }
+
+    // 2. Fallback: Fit to properties
+    if (properties.length > 0) {
       const validCoords = properties
         // @ts-ignore
         .filter(p => p.coordinates && p.coordinates[0] && p.coordinates[1])
@@ -101,12 +114,13 @@ function MapUpdater({ properties }: { properties: Property[] }) {
         const bounds = L.latLngBounds(validCoords);
         map.fitBounds(bounds, { 
           padding: [80, 80],
-          maxZoom: 15
+          maxZoom: 15,
+          animate: true,
+          duration: 1.5
         });
-        hasInitialFocus.current = true;
       }
     }
-  }, [properties, map]);
+  }, [properties, centerCoordinates, map]);
   
   return null;
 }
@@ -116,17 +130,18 @@ interface MapComponentProps {
   hoveredPropertyId?: string | null;
   onMarkerClick?: (id: string) => void;
   onSearchArea?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+  centerCoordinates?: [number, number] | null;
 }
 
-export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick, onSearchArea }: MapComponentProps) {
+export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick, onSearchArea, centerCoordinates }: MapComponentProps) {
   const navigate = useNavigate();
 
   // Centro inicial (São Paulo)
   const defaultCenter: [number, number] = [-23.55052, -46.633308];
   
   // Safe initial center
-  let initialCenter = defaultCenter;
-  if (properties.length > 0) {
+  let initialCenter = centerCoordinates || defaultCenter;
+  if (!centerCoordinates && properties.length > 0) {
      // @ts-ignore
      if (properties[0].coordinates) initialCenter = properties[0].coordinates;
   }
@@ -149,7 +164,7 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
     <div className="h-full w-full relative z-0 group">
       <MapContainer
         center={initialCenter}
-        zoom={13}
+        zoom={centerCoordinates ? 15 : 13} // Higher zoom for specific searches
         minZoom={10} 
         maxZoom={18}
         scrollWheelZoom={true}
@@ -161,7 +176,7 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
         
-        <MapUpdater properties={properties} />
+        <MapUpdater properties={properties} centerCoordinates={centerCoordinates} />
         
         {onSearchArea && (
           <MapController onBoundsChange={onSearchArea} />

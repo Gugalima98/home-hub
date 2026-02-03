@@ -55,7 +55,7 @@ const App = () => (
               <Route path="/cookies" element={<CookiesPage />} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/mapa-do-site" element={<Sitemap />} />
-              <Route path="/:operation/imovel/:locationSlug" element={<PropertiesPage />} />
+              <Route path="/:operation/imovel/:locationSlug/*" element={<PropertiesPage />} />
               <Route path="/imoveis" element={<PropertiesPage />} />
               <Route path="/imovel/:code/:operation/:slug" element={<PropertyDetailPage />} />
               <Route path="/login" element={<Login />} />

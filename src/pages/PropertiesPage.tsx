@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, useParams, Navigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams, useParams, Navigate, useLocation } from "react-router-dom";
 import { Map, List, Search, ChevronRight, Loader2, SlidersHorizontal, Bell, ArrowUpDown, ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -25,16 +25,25 @@ import { SEO } from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 import { useFilters } from "@/contexts/FilterContext";
 import { generatePropertyUrl } from "@/lib/utils";
+import { parseUrlFilters, generateUrlFilters } from "@/lib/url-filters";
 
 const PAGE_SIZE = 12;
 
 type SortOption = "newest" | "price_asc" | "price_desc" | "area_desc";
 
 const PropertiesPage = () => {
-  const { filters, setFilter } = useFilters();
+  const { filters, setFilter, setManyFilters } = useFilters();
   const [searchParams] = useSearchParams();
-  const { operation: routeOperation, locationSlug } = useParams();
+  const params = useParams();
+  const location = useLocation();
   
+  const routeOperation = params.operation;
+  const locationSlug = params.locationSlug;
+  const urlFilters = params["*"]; 
+  
+  // Ref to track if we have synced initial URL state to filters
+  const isInitialMount = useRef(true);
+
   // --- DERIVED STATE (Synchronous URL Parsing) ---
   const parseLocationSlug = (slug?: string) => {
     if (!slug) return { city: null, neighborhood: null };
@@ -67,14 +76,13 @@ const PropertiesPage = () => {
   };
 
   const { city: slugCity, neighborhood: slugNeighborhood } = parseLocationSlug(locationSlug);
-  // -----------------------------------------------
 
+  // ... (state defs remain) ...
   const [properties, setProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [topNeighborhoods, setTopNeighborhoods] = useState<{ neighborhood: string; count: number }[]>([]);
   const [seoLinks, setSeoLinks] = useState<{ label: string; url: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  // Removed activeNeighborhood state
   const [loadingMore, setLoadingMore] = useState(false);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -86,120 +94,73 @@ const PropertiesPage = () => {
 
   const navigate = useNavigate();
 
-  // Sync URL params to Filter Context on mount
+  // 1. SYNC URL TO FILTERS (One time on mount/param change)
   useEffect(() => {
-    // 1. Handle Route Params (Priority)
+    const newFilters: any = {};
+    let hasChanges = false;
+
+    // Operation
     if (routeOperation) {
       if (routeOperation === 'alugar' && filters.operationType !== 'rent') {
-        setFilter("operationType", 'rent');
+        newFilters.operationType = 'rent';
+        hasChanges = true;
       } else if (routeOperation === 'comprar' && filters.operationType !== 'buy') {
-        setFilter("operationType", 'buy');
+        newFilters.operationType = 'buy';
+        hasChanges = true;
       }
-    } else {
-       // Fallback: Query Params
-       const op = searchParams.get("operation");
-        if (op && (op === 'rent' || op === 'buy')) {
-          if (filters.operationType !== op) setFilter("operationType", op);
-        }
     }
 
+    // Location
     if (locationSlug) {
-      // Advanced Slug Parsing (QuintoAndar Style)
-      // Pattern: {neighborhood}-{city}-{state}-brasil
-      
-      const citySuffixes = [
-        { slug: '-rio-de-janeiro-rj-brasil', city: 'Rio de Janeiro' },
-        { slug: '-sao-paulo-sp-brasil', city: 'São Paulo' }
-      ];
-
-      let foundCity = null;
-      let foundNeighborhood = null;
-
-      for (const suffix of citySuffixes) {
-        if (locationSlug.endsWith(suffix.slug)) {
-          foundCity = suffix.city;
-          // Extract neighborhood part
-          const neighborhoodPart = locationSlug.substring(0, locationSlug.length - suffix.slug.length);
-          if (neighborhoodPart.length > 0) {
-             foundNeighborhood = neighborhoodPart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-             foundNeighborhood = foundNeighborhood.replace(/\bDe\b/g, 'de').replace(/\bDa\b/g, 'da').replace(/\bDo\b/g, 'do');
-          }
-          break;
-        }
-      }
-
-      // If no suffix matched, check if it is just the city slug itself
-      if (!foundCity) {
-          if (locationSlug === 'rio-de-janeiro-rj-brasil') foundCity = 'Rio de Janeiro';
-          else if (locationSlug === 'sao-paulo-sp-brasil') foundCity = 'São Paulo';
-          else {
-              // Generic fallback parser (assume city only if simpler)
-              let clean = locationSlug.replace(/-[a-z]{2}-brasil$/, '').replace(/-brasil$/, '');
-              foundCity = clean.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          }
-      }
-
-      if (foundCity && filters.searchLocation !== foundCity) {
-         setFilter("searchLocation", foundCity);
-      }
-
-    } else {
-        // LEGACY ROUTE HANDLER (/imoveis)
-        if (!routeOperation && !locationSlug) {
-             // Redirect to default friendly URL
-             navigate("/alugar/imovel/rio-de-janeiro-rj-brasil", { replace: true });
-             return;
-        }
-
-        // Strict Redirect for Legacy Neighborhood Query Param
-        // If we are on a friendly URL BUT have a query param (e.g. /alugar/imovel/rio...?neighborhood=Ipanema)
-        // We must redirect to the cleaner /alugar/imovel/ipanema-rio... URL
-        const legacyNeigh = searchParams.get("neighborhood");
-        if (legacyNeigh) {
-            const slugify = (text: string) => text
-                .toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
-                .replace(/\s+/g, '-');
-            
-            const nSlug = slugify(legacyNeigh);
-            // Assume Rio for now as base context if extracting from query param on top of base URL
-            // Or try to reuse existing locationSlug city part if available. 
-            // Since we are forcing Rio as default, let's append to Rio base.
-            const cityBase = "rio-de-janeiro-rj-brasil"; 
-            
-            const newSlug = `${nSlug}-${cityBase}`;
-            const op = routeOperation || (filters.operationType === 'buy' ? 'comprar' : 'alugar');
-            
-            // Clean other params to avoid loops, but keep important filters if needed? 
-            // User asked to ban query params for neighborhood.
-            navigate(`/${op}/imovel/${newSlug}`, { replace: true });
-            return;
-        }
-
-        // Fallback for query params
-        const loc = searchParams.get("location");
-        const neigh = searchParams.get("neighborhood");
-        const targetLocation = neigh || loc;
+        let foundCity = null;
+        if (locationSlug.endsWith('-rio-de-janeiro-rj-brasil') || locationSlug === 'rio-de-janeiro-rj-brasil') foundCity = 'Rio de Janeiro';
+        else if (locationSlug.endsWith('-sao-paulo-sp-brasil') || locationSlug === 'sao-paulo-sp-brasil') foundCity = 'São Paulo';
         
-        if (targetLocation) {
-            if (filters.searchLocation !== targetLocation) {
-                setFilter("searchLocation", targetLocation);
-            }
+        if (foundCity && filters.searchLocation !== foundCity) {
+             newFilters.searchLocation = foundCity;
+             hasChanges = true;
         }
     }
 
-    // Property Type
-    const type = searchParams.get("type");
-    if (type) {
-      const types = type.split(",");
-      if (JSON.stringify(filters.propertyTypes) !== JSON.stringify(types)) {
-         setFilter("propertyTypes", types);
-      }
+    // Parse Wildcard Filters
+    if (urlFilters) {
+        const parsed = parseUrlFilters(urlFilters);
+        Object.keys(parsed).forEach(key => {
+            // @ts-ignore
+            if (JSON.stringify(filters[key]) !== JSON.stringify(parsed[key])) {
+                // @ts-ignore
+                newFilters[key] = parsed[key];
+                hasChanges = true;
+            }
+        });
+    }
+
+    if (hasChanges) {
+        setManyFilters(newFilters);
     }
     
-    // ... (rest of numeric filters remain same via searchParams for now)
+    isInitialMount.current = false;
 
-  }, [searchParams, routeOperation, locationSlug, slugCity]);
+  }, [routeOperation, locationSlug, urlFilters]); 
+
+  // 2. SYNC FILTERS TO URL
+  useEffect(() => {
+      if (isInitialMount.current) return;
+
+      const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
+      const currentLocSlug = locationSlug || "rio-de-janeiro-rj-brasil"; // Fallback if lost
+      
+      const filterSegment = generateUrlFilters(filters);
+      
+      const newPath = `/${op}/imovel/${currentLocSlug}${filterSegment ? '/' + filterSegment : ''}`;
+      const currentPath = window.location.pathname;
+      
+      if (currentPath !== newPath && decodeURIComponent(currentPath) !== newPath) {
+          // AQUI: PRESERVANDO O STATE (COORDENADAS) AO NAVEGAR
+          navigate(newPath, { replace: true, state: location.state });
+      }
+
+  }, [filters, locationSlug]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -224,7 +185,7 @@ const PropertiesPage = () => {
       const op = filters.operationType || 'rent'; 
 
       const { data, error } = await supabase
-        .from('seo_listing_links') // Changed from seo_cities
+        .from('seo_listing_links')
         .select('links')
         .ilike('city', `%${city}%`)
         .eq('operation', op)
@@ -257,24 +218,21 @@ const PropertiesPage = () => {
       query = query.eq("operation_type", filters.operationType);
     }
 
-    // Specific Neighborhood Filter (Stricter)
+    // Specific Neighborhood Filter (from URL Slug)
     const urlNeighborhood = searchParams.get("neighborhood");
     
-    // 1. From URL Slug (Priority)
     if (slugNeighborhood) {
        query = query.ilike("neighborhood", `%${slugNeighborhood}%`);
        if (slugCity || filters.searchLocation) {
           query = query.ilike("city", `%${slugCity || filters.searchLocation}%`);
        }
     } 
-    // 2. From Query Param (Legacy)
     else if (urlNeighborhood) {
          query = query.ilike("neighborhood", `%${urlNeighborhood}%`);
          if (filters.searchLocation && filters.searchLocation !== urlNeighborhood) {
             query = query.ilike("city", `%${filters.searchLocation}%`);
          }
     } 
-    // 3. Generic Search Location (Fallback)
     else if (filters.searchLocation) {
       query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
     }
@@ -360,7 +318,6 @@ const PropertiesPage = () => {
     setHoveredPropertyId(id);
   };
 
-  // NAVEGAÇÃO ATUALIZADA AQUI
   const handlePropertyClick = (id: string) => {
     const property = properties.find(p => p.id === id);
     if (property) {
@@ -418,16 +375,7 @@ const PropertiesPage = () => {
      return `Encontre as melhores opções de imóveis para ${operation} em São Paulo. Casas, apartamentos e muito mais na R7 Consultoria.`;
   };
 
-  const togglePropertyType = (type: string) => {
-    if (filters.propertyTypes.includes(type)) {
-      setFilter("propertyTypes", filters.propertyTypes.filter(t => t !== type));
-    } else {
-      setFilter("propertyTypes", [...filters.propertyTypes, type]);
-    }
-  };
-
-  // --- INSTANT REDIRECT CHECK ---
-  // Moved to end to prevent Hook order errors
+  // Check for Legacy Redirect
   const legacyNeigh = searchParams.get("neighborhood");
   if (legacyNeigh) {
       const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
@@ -441,7 +389,9 @@ const PropertiesPage = () => {
       
       return <Navigate to={`/${op}/imovel/${newSlug}`} replace />;
   }
-  // ------------------------------
+
+  // Get search coordinates directly from location state
+  const searchCoordinates = location.state?.searchCoordinates as [number, number] | null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -513,18 +463,14 @@ const PropertiesPage = () => {
                     <button
                       key={item.neighborhood}
                       onClick={() => {
-                        // Generate Slug: neighborhood-city-state-brasil
                         const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
-                        
-                        // Basic slugify function
                         const slugify = (text: string) => text
                           .toLowerCase()
-                          .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+                          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                           .replace(/\s+/g, '-');
                         
                         const neighborhoodSlug = slugify(item.neighborhood);
-                        const citySlug = "rio-de-janeiro-rj-brasil"; // Hardcoded for Rio default for now, or derive from city context
-                        
+                        const citySlug = "rio-de-janeiro-rj-brasil";
                         const fullSlug = `${neighborhoodSlug}-${citySlug}`;
                         navigate(`/${op}/imovel/${fullSlug}`);
                       }}
@@ -636,6 +582,7 @@ const PropertiesPage = () => {
             hoveredPropertyId={hoveredPropertyId} 
             onMarkerClick={handleMarkerClick}
             onSearchArea={handleAreaSearch}
+            centerCoordinates={searchCoordinates}
            />
         </div>
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   SlidersHorizontal, 
@@ -84,21 +84,50 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function FilterBar() {
-  const { filters, setFilter } = useFilters();
+  const { filters, setFilter, setManyFilters } = useFilters();
   const [localSearch, setLocalSearch] = useState(filters.searchLocation || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  
-  // Use Nominatim search
-  const { searchLocations } = useLocations();
-  const debouncedSearchTerm = useDebounce(localSearch, 500); // 500ms delay
-
   const navigate = useNavigate();
   
-  const [recentSearches, setRecentSearches] = useState([
-    { location: "Botafogo, Rio de Janeiro – RJ, Brasil", details: "Tipos de Imóveis (4) · 1+ vagas", slug: "botafogo-rio-de-janeiro-rj-brasil" }
-  ]);
+  const { searchLocations } = useLocations();
+  const debouncedSearchTerm = useDebounce(localSearch, 500);
+
+  // Persistent history state
+  const [recentSearches, setRecentSearches] = useState<{ location: string, details: string, slug: string }[]>(() => {
+    try {
+        const saved = localStorage.getItem("recentSearches");
+        return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+        return [];
+    }
+  });
+  
+  const addToHistory = (location: string, slug: string) => {
+    const newItem = { 
+      location, 
+      details: "Busca recente", 
+      slug 
+    };
+    
+    setRecentSearches(prev => {
+      // Remove duplicates based on slug
+      const filtered = prev.filter(item => item.slug !== slug);
+      // Add to top, limit to 5
+      const updated = [newItem, ...filtered].slice(0, 5);
+      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeFromHistory = (index: number) => {
+    setRecentSearches(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      return updated;
+    });
+  };
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -115,12 +144,10 @@ export default function FilterBar() {
     };
   }, []);
 
-  // Effect to trigger search when debounced term changes
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (debouncedSearchTerm.length >= 3) {
         setIsLoadingSuggestions(true);
-        // Pass the current search location filter as context to prioritize results
         const results = await searchLocations(debouncedSearchTerm, filters.searchLocation);
         setSuggestions(results);
         setIsLoadingSuggestions(false);
@@ -136,7 +163,8 @@ export default function FilterBar() {
     setLocalSearch(e.target.value);
   };
 
-  const handleSuggestionClick = (suggestion: LocationSuggestion) => {
+  const handleSuggestionClick = async (suggestion: LocationSuggestion) => {
+    // Slugify logic
     const slugify = (text: string) => text
       .toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -145,8 +173,6 @@ export default function FilterBar() {
     const nameSlug = slugify(suggestion.name);
     let fullSlug = "";
 
-    // Mapping basic state codes if Nominatim returns full names
-    // This is a basic map, for robustness a library or full map is needed
     const stateMap: Record<string, string> = { "Rio de Janeiro": "rj", "São Paulo": "sp", "Minas Gerais": "mg" }; 
     const stateCode = suggestion.state?.length === 2 ? suggestion.state.toLowerCase() : (stateMap[suggestion.state || ""] || "br");
 
@@ -159,9 +185,42 @@ export default function FilterBar() {
 
     const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
     
+    // FETCH COORDINATES IF MISSING (Manual List Fallback)
+    let lat = suggestion.lat;
+    let lon = suggestion.lon;
+
+    if (!lat || !lon) {
+       try {
+         // Construct specific query for geocoding
+         const query = `${suggestion.name}, ${suggestion.city || ""}, ${suggestion.state || "Brasil"}`;
+         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+         const res = await fetch(url, { headers: { 'User-Agent': 'HomeHub-RealEstate/1.0' } });
+         const data = await res.json();
+         if (data && data.length > 0) {
+            lat = data[0].lat;
+            lon = data[0].lon;
+         }
+       } catch (err) {
+         console.error("Failed to fetch coordinates for manual item", err);
+       }
+    }
+
+    // Update filters and coordinates
+    const coords = lat && lon ? [parseFloat(lat), parseFloat(lon)] : null;
+    
+    setManyFilters({
+      searchLocation: suggestion.name,
+      searchCoordinates: coords
+    });
+
+    // Add to history
+    addToHistory(suggestion.name, fullSlug);
+
     setLocalSearch(suggestion.name);
     setIsSearchFocused(false);
-    navigate(`/${op}/imovel/${fullSlug}`);
+    
+    // Pass coordinates in navigation state so PropertiesPage can pick them up
+    navigate(`/${op}/imovel/${fullSlug}`, { state: { searchCoordinates: coords } });
   };
 
   const handleRecentClick = (search: typeof recentSearches[0]) => {
@@ -173,7 +232,7 @@ export default function FilterBar() {
 
   const handleRemoveRecent = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
-    setRecentSearches(prev => prev.filter((_, i) => i !== index));
+    removeFromHistory(index);
   };
 
   const handleNearMe = () => {
@@ -344,26 +403,22 @@ export default function FilterBar() {
 
           {/* Filters (Scrollable) */}
           <div className="flex-1 flex items-center gap-3 overflow-hidden relative">
-            <div className="absolute left-0 h-full flex items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10 pointer-events-none">
-               <button 
-                  onClick={scrollLeft}
-                  className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors pointer-events-auto"
-               >
-                  <ChevronLeft className="h-5 w-5 text-gray-600" />
-               </button>
-            </div>
+            
+            {/* Scroll Arrow Left (Gradient Fade) */}
+          <div className="absolute left-0 h-full flex items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10">
+             <button 
+                onClick={scrollLeft}
+                className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors pointer-events-auto"
+             >
+                <ChevronLeft className="h-5 w-5 text-gray-600" />
+             </button>
+          </div>
 
-            <div 
-              ref={scrollRef}
+          <div 
+            ref={scrollRef}
               className="flex items-center gap-3 overflow-x-auto scrollbar-hide px-20"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {/* ... (Previous Filters Code remains largely same) ... */}
-              {/* Note: I'm keeping the filters structure simple for brevity in this rewrite, 
-                  but in a real scenario I'd paste the full Popover blocks back. 
-                  Given the token limit, I will assume the previous filters logic is preserved 
-                  or I should paste it all if required. I will paste the filters back to ensure no regression. */}
-              
               {/* Operation Type */}
               <Popover>
                 <PopoverTrigger asChild>
