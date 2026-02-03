@@ -16,14 +16,39 @@ const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[
 
 // Fallback manual list for major neighborhoods ensuring they always appear
 const MAJOR_NEIGHBORHOODS: Record<string, string[]> = {
+  "AC": ["Centro", "Bosque", "Estação Experimental", "Ipê"], // Rio Branco
+  "AL": ["Ponta Verde", "Pajuçara", "Jatiúca", "Farol"], // Maceió
+  "AP": ["Centro", "Trem", "Santa Rita", "Cabralzinho"], // Macapá
+  "AM": ["Ponta Negra", "Adrianópolis", "Vieiralves", "Parque 10"], // Manaus
+  "BA": ["Barra", "Pituba", "Rio Vermelho", "Ondina", "Graça", "Horto Florestal", "Caminho das Árvores", "Itaigara"], // Salvador
+  "CE": ["Meireles", "Aldeota", "Cocó", "Varjota", "Mucuripe", "Praia de Iracema"], // Fortaleza
+  "DF": ["Asa Sul", "Asa Norte", "Lago Sul", "Lago Norte", "Sudoeste", "Noroeste", "Águas Claras"], // Brasília
+  "ES": ["Praia do Canto", "Jardim da Penha", "Mata da Praia", "Jardim Camburi"], // Vitória
+  "GO": ["Setor Bueno", "Setor Marista", "Setor Oeste", "Jardim Goiás"], // Goiânia
+  "MA": ["Ponta d'Areia", "Renascença", "Calhau", "São Francisco"], // São Luís
+  "MT": ["Goiabeiras", "Popular", "Jardim das Américas", "Duque de Caxias"], // Cuiabá
+  "MS": ["Chácara Cachoeira", "Jardim dos Estados", "Santa Fé", "Centro"], // Campo Grande
+  "MG": ["Savassi", "Lourdes", "Belvedere", "Funcionários", "Sion", "Anchieta", "Mangabeiras", "Pampulha", "Centro"], // Belo Horizonte
+  "PA": ["Umarizal", "Nazaré", "Batista Campos", "Marco"], // Belém
+  "PB": ["Manaíra", "Tambaú", "Cabo Branco", "Bessa"], // João Pessoa
+  "PR": ["Batel", "Água Verde", "Bigorrilho", "Centro Cívico", "Ecoville", "Santa Felicidade"], // Curitiba
+  "PE": ["Boa Viagem", "Pina", "Espinheiro", "Casa Forte", "Jaqueira", "Graças", "Derby"], // Recife
+  "PI": ["Jockey", "Fátima", "Ininga", "São Cristóvão"], // Teresina
   "RJ": [
     "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Botafogo", "Tijuca", "Flamengo", 
     "Laranjeiras", "Centro", "Recreio dos Bandeirantes", "Jacarepaguá", "Méier", "Madureira", "Grajaú"
   ],
+  "RN": ["Ponta Negra", "Tirol", "Petrópolis", "Capim Macio"], // Natal
+  "RS": ["Moinhos de Vento", "Bela Vista", "Menino Deus", "Bom Fim", "Cidade Baixa", "Centro Histórico"], // Porto Alegre
+  "RO": ["Olaria", "Embratel", "Nova Porto Velho", "Centro"], // Porto Velho
+  "RR": ["Centro", "São Francisco", "Aparecida", "Paraviana"], // Boa Vista
+  "SC": ["Centro", "Agronômica", "Trindade", "Coqueiros", "Itacorubi", "Jurerê Internacional", "Campeche"], // Florianópolis
   "SP": [
     "Vila Mariana", "Pinheiros", "Moema", "Perdizes", "Itaim Bibi", "Jardins", "Paulista",
     "Brooklin", "Vila Madalena", "Tatuapé", "Morumbi", "Higienópolis"
-  ]
+  ],
+  "SE": ["Atalaia", "Jardins", "Grageru", "13 de Julho"], // Aracaju
+  "TO": ["Plano Diretor Sul", "Plano Diretor Norte", "Graciosa"], // Palmas
 };
 
 export const useLocations = () => {
@@ -52,17 +77,25 @@ export const useLocations = () => {
 
     let results: LocationSuggestion[] = [];
 
-    // 1. Manual List Search (Instant & Reliable for major places)
-    // Check which states are relevant (active states + context state if inferred)
-    const targetStates = activeStates.length > 0 ? activeStates : ["RJ", "SP"]; 
-    
-    targetStates.forEach(uf => {
+    // 1. Manual List Search (ALL STATES)
+    // We iterate over ALL keys in MAJOR_NEIGHBORHOODS to ensure complete coverage.
+    // Capital mapping is manual/implied for simplicity in this fallback list.
+    const capitals: Record<string, string> = {
+        "AC": "Rio Branco", "AL": "Maceió", "AP": "Macapá", "AM": "Manaus", "BA": "Salvador",
+        "CE": "Fortaleza", "DF": "Brasília", "ES": "Vitória", "GO": "Goiânia", "MA": "São Luís",
+        "MT": "Cuiabá", "MS": "Campo Grande", "MG": "Belo Horizonte", "PA": "Belém", "PB": "João Pessoa",
+        "PR": "Curitiba", "PE": "Recife", "PI": "Teresina", "RJ": "Rio de Janeiro", "RN": "Natal",
+        "RS": "Porto Alegre", "RO": "Porto Velho", "RR": "Boa Vista", "SC": "Florianópolis",
+        "SP": "São Paulo", "SE": "Aracaju", "TO": "Palmas"
+    };
+
+    Object.keys(MAJOR_NEIGHBORHOODS).forEach(uf => {
        const neighborhoods = MAJOR_NEIGHBORHOODS[uf] || [];
        neighborhoods.forEach(neigh => {
           if (normalize(neigh).includes(normalizedQuery)) {
-             // Basic inference for city based on UF manual map
-             const city = uf === 'RJ' ? 'Rio de Janeiro' : 'São Paulo';
-             // Only add if it matches context if context is present
+             const city = capitals[uf] || "Capital";
+             
+             // Context filter logic (optional but good for relevance)
              if (cleanContext && !normalize(city).includes(cleanContext)) return;
 
              results.push({
