@@ -21,7 +21,8 @@ import {
   Settings, 
   LogOut, 
   ShieldCheck,
-  MapPin
+  MapPin,
+  Link as LinkIcon
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -79,6 +80,14 @@ export default function AdminLayout() {
                       <Link to="/admin/seo-cities">
                         <MapPin className="h-4 w-4" />
                         <span>SEO Cidades</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
+                      <Link to="/admin/seo-listing">
+                        <LinkIcon className="h-4 w-4" />
+                        <span>SEO Imóveis</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

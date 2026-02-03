@@ -31,6 +31,7 @@ import AdminProperties from "./pages/admin/AdminProperties";
 import AdminPropertyForm from "./pages/admin/AdminPropertyForm";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSeoCities from "./pages/admin/AdminSeoCities";
+import AdminSeoListing from "./pages/admin/AdminSeoListing";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/cookies" element={<CookiesPage />} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/mapa-do-site" element={<Sitemap />} />
+              <Route path="/:operation/imovel/:locationSlug" element={<PropertiesPage />} />
               <Route path="/imoveis" element={<PropertiesPage />} />
               <Route path="/imovel/:code/:operation/:slug" element={<PropertyDetailPage />} />
               <Route path="/login" element={<Login />} />
@@ -84,6 +86,7 @@ const App = () => (
                 <Route path="properties/edit/:id" element={<AdminPropertyForm />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="seo-cities" element={<AdminSeoCities />} />
+                <Route path="seo-listing" element={<AdminSeoListing />} />
               </Route>
 
               {/* Catch-all */}
