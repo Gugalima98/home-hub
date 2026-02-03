@@ -1,11 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   SlidersHorizontal, 
   MapPin, 
   ChevronDown, 
   Bell,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  History,
+  MousePointer2,
+  Crosshair,
+  X,
+  Search
 } from "lucide-react";
 
 import {
@@ -19,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useFilters } from "@/contexts/FilterContext";
+import { useLocations, LocationSuggestion } from "@/hooks/useLocations";
 
 // Filter Pill Component
 const FilterPill = ({ label, active = false, onClick, hasDropdown = true }: { label: string; active?: boolean; onClick?: () => void; hasDropdown?: boolean }) => (
@@ -62,15 +69,130 @@ const CurrencyInput = ({
   </div>
 );
 
+// Helper para Debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export default function FilterBar() {
   const { filters, setFilter } = useFilters();
-  const [localSearch, setLocalSearch] = useState(filters.searchLocation);
+  const [localSearch, setLocalSearch] = useState(filters.searchLocation || "");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
+  // Use Nominatim search
+  const { searchLocations } = useLocations();
+  const debouncedSearchTerm = useDebounce(localSearch, 500); // 500ms delay
+
+  const navigate = useNavigate();
+  
+  const [recentSearches, setRecentSearches] = useState([
+    { location: "Botafogo, Rio de Janeiro – RJ, Brasil", details: "Tipos de Imóveis (4) · 1+ vagas", slug: "botafogo-rio-de-janeiro-rj-brasil" }
+  ]);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Effect to trigger search when debounced term changes
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (debouncedSearchTerm.length >= 3) {
+        setIsLoadingSuggestions(true);
+        // Pass the current search location filter as context to prioritize results
+        const results = await searchLocations(debouncedSearchTerm, filters.searchLocation);
+        setSuggestions(results);
+        setIsLoadingSuggestions(false);
+      } else {
+        setSuggestions([]);
+      }
+    };
+
+    fetchSuggestions();
+  }, [debouncedSearchTerm, searchLocations, filters.searchLocation]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalSearch(e.target.value);
-    setFilter("searchLocation", e.target.value);
+  };
+
+  const handleSuggestionClick = (suggestion: LocationSuggestion) => {
+    const slugify = (text: string) => text
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '-');
+
+    const nameSlug = slugify(suggestion.name);
+    let fullSlug = "";
+
+    // Mapping basic state codes if Nominatim returns full names
+    // This is a basic map, for robustness a library or full map is needed
+    const stateMap: Record<string, string> = { "Rio de Janeiro": "rj", "São Paulo": "sp", "Minas Gerais": "mg" }; 
+    const stateCode = suggestion.state?.length === 2 ? suggestion.state.toLowerCase() : (stateMap[suggestion.state || ""] || "br");
+
+    if (suggestion.type === "Cidade") {
+      fullSlug = `${nameSlug}-${stateCode}-brasil`;
+    } else {
+      const citySlug = slugify(suggestion.city || "");
+      fullSlug = `${nameSlug}-${citySlug}-${stateCode}-brasil`;
+    }
+
+    const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
+    
+    setLocalSearch(suggestion.name);
+    setIsSearchFocused(false);
+    navigate(`/${op}/imovel/${fullSlug}`);
+  };
+
+  const handleRecentClick = (search: typeof recentSearches[0]) => {
+    const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
+    setLocalSearch(search.location.split(",")[0]);
+    setIsSearchFocused(false);
+    navigate(`/${op}/imovel/${search.slug}`);
+  };
+
+  const handleRemoveRecent = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    setRecentSearches(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleNearMe = () => {
+    alert("Funcionalidade em breve!");
+    setIsSearchFocused(false);
+  };
+
+  const handleDrawMap = () => {
+    alert("Funcionalidade 'Desenhar no mapa' em desenvolvimento!");
+    setIsSearchFocused(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      setIsSearchFocused(false);
+      if (localSearch) {
+         setFilter("searchLocation", localSearch);
+      }
+    }
   };
 
   const scrollRight = () => {
@@ -85,6 +207,8 @@ export default function FilterBar() {
     }
   };
 
+  const showSuggestions = localSearch.length > 0;
+
   return (
     <>
       <div className="h-[98px] w-full bg-transparent" aria-hidden="true" />
@@ -92,38 +216,154 @@ export default function FilterBar() {
       <div className="bg-white border-b fixed top-[69px] left-0 right-0 z-30 py-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]">
         <div className="container-fluid px-8 flex items-center gap-6">
         
-          {/* Location Input */}
-          <div className="relative flex-shrink-0 w-[380px] lg:w-[460px]">
-            <div className="relative">
-              <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+          {/* Location Input & Dropdown */}
+          <div className="relative flex-shrink-0 w-[380px] lg:w-[460px]" ref={searchContainerRef}>
+            <div className="relative z-20">
+              {isSearchFocused ? (
+                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-[#3b44c6]" />
+              ) : (
+                 <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+              )}
+              
               <input
                 type="text"
                 placeholder="Qualquer lugar em São Paulo, SP"
-                className="w-full h-[48px] rounded-full border-none bg-[#f3f5f6] pl-14 pr-6 text-[13px] font-normal text-[#1f2022] focus:outline-none focus:ring-2 focus:ring-[#3b44c6]/20 placeholder:text-gray-500 transition-shadow"
+                className={`w-full h-[48px] rounded-full border bg-[#f3f5f6] pl-14 pr-10 text-[13px] font-normal text-[#1f2022] focus:outline-none transition-all ${
+                  isSearchFocused 
+                    ? "bg-white border-[#3b44c6] ring-1 ring-[#3b44c6]" 
+                    : "border-transparent hover:bg-[#e5e7eb]"
+                }`}
                 value={localSearch}
                 onChange={handleSearchChange}
+                onFocus={() => setIsSearchFocused(true)}
+                onKeyDown={handleKeyDown}
               />
+              
+              {isSearchFocused && (
+                <button 
+                  onClick={() => {
+                    setLocalSearch("");
+                    setSuggestions([]);
+                    setIsSearchFocused(false);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
+
+            {/* Search Dropdown */}
+            {isSearchFocused && (
+              <div className="absolute top-[56px] left-0 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden py-4 animate-in fade-in zoom-in-95 duration-200 origin-top z-50 max-h-[400px] overflow-y-auto">
+                
+                {/* SUGGESTIONS MODE */}
+                {showSuggestions ? (
+                   <div className="px-2 py-2">
+                      {isLoadingSuggestions ? (
+                        <div className="p-4 text-center text-sm text-gray-500">Buscando...</div>
+                      ) : suggestions.length > 0 ? (
+                        suggestions.map((item, index) => (
+                          <button
+                            key={index}
+                            className="flex items-center gap-3 w-full text-left p-3 hover:bg-gray-50 rounded-lg group transition-colors"
+                            onClick={() => handleSuggestionClick(item)}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white border border-transparent group-hover:border-gray-200 transition-colors">
+                              <MapPin className="h-5 w-5 text-gray-500" />
+                            </div>
+                            <div className="flex flex-col overflow-hidden">
+                              <span className="text-sm font-medium text-[#1f2022] truncate">{item.name}</span>
+                              <span className="text-xs text-gray-500 truncate">{item.type} • {item.display_name}</span>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-gray-500">
+                          {debouncedSearchTerm.length < 3 ? "Digite mais para buscar..." : "Nenhum local encontrado."}
+                        </div>
+                      )}
+                   </div>
+                ) : (
+                  /* DEFAULT MODE (History + Extras) */
+                  <>
+                    {recentSearches.length > 0 && (
+                      <>
+                        <div className="px-6 pb-2 pt-2">
+                          <h3 className="text-sm font-bold text-[#1f2022] mb-4">Últimas buscas</h3>
+                          <div className="space-y-4">
+                            {recentSearches.map((search, i) => (
+                              <div 
+                                key={i} 
+                                className="flex items-start gap-3 group cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-lg transition-colors"
+                                onClick={() => handleRecentClick(search)}
+                              >
+                                <History className="h-5 w-5 text-[#1f2022] mt-0.5" />
+                                <div className="flex-1 border-b border-gray-100 pb-4 group-last:border-0 group-last:pb-0">
+                                  <p className="text-sm font-normal text-[#1f2022] leading-tight">{search.location}</p>
+                                  <p className="text-xs text-gray-500 mt-1">{search.details}</p>
+                                </div>
+                                <button 
+                                  className="text-gray-400 hover:text-[#1f2022] p-1 rounded-full hover:bg-gray-200"
+                                  onClick={(e) => handleRemoveRecent(e, i)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="h-px bg-gray-100 my-2" />
+                      </>
+                    )}
+
+                    <div className="px-6 pt-2 pb-4">
+                      <h3 className="text-sm font-bold text-[#1f2022] mb-4">Mais jeitos de buscar</h3>
+                      <div className="space-y-4">
+                        <button 
+                          className="flex items-center gap-3 w-full text-left hover:opacity-70 transition-opacity p-2 -mx-2 rounded-lg hover:bg-gray-50"
+                          onClick={handleDrawMap}
+                        >
+                          <MousePointer2 className="h-5 w-5 text-[#1f2022]" />
+                          <span className="text-sm font-normal text-[#1f2022]">Desenhe a área no mapa</span>
+                        </button>
+                        <button 
+                          className="flex items-center gap-3 w-full text-left hover:opacity-70 transition-opacity p-2 -mx-2 rounded-lg hover:bg-gray-50"
+                          onClick={handleNearMe}
+                        >
+                          <Crosshair className="h-5 w-5 text-[#1f2022]" />
+                          <span className="text-sm font-normal text-[#1f2022]">Perto de você</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Scrollable Filters Area */}
+          {/* Filters (Scrollable) */}
           <div className="flex-1 flex items-center gap-3 overflow-hidden relative">
-            
-            {/* Scroll Arrow Left (Gradient Fade) */}
-          <div className="absolute left-0 h-full flex items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10">
-             <button 
-                onClick={scrollLeft}
-                className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors pointer-events-auto"
-             >
-                <ChevronLeft className="h-5 w-5 text-gray-600" />
-             </button>
-          </div>
+            <div className="absolute left-0 h-full flex items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10 pointer-events-none">
+               <button 
+                  onClick={scrollLeft}
+                  className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors pointer-events-auto"
+               >
+                  <ChevronLeft className="h-5 w-5 text-gray-600" />
+               </button>
+            </div>
 
-          <div 
-            ref={scrollRef}
+            <div 
+              ref={scrollRef}
               className="flex items-center gap-3 overflow-x-auto scrollbar-hide px-20"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
+              {/* ... (Previous Filters Code remains largely same) ... */}
+              {/* Note: I'm keeping the filters structure simple for brevity in this rewrite, 
+                  but in a real scenario I'd paste the full Popover blocks back. 
+                  Given the token limit, I will assume the previous filters logic is preserved 
+                  or I should paste it all if required. I will paste the filters back to ensure no regression. */}
+              
               {/* Operation Type */}
               <Popover>
                 <PopoverTrigger asChild>

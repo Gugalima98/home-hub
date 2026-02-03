@@ -206,7 +206,7 @@ const PropertiesPage = () => {
     setPage(0);
     setHasMore(true);
     fetchProperties(0, true);
-  }, [filters, sortOrder]);
+  }, [filters, sortOrder, locationSlug]);
 
     const fetchTopNeighborhoods = async () => {
       const { data, error } = await supabase.rpc('get_top_neighborhoods', {
@@ -568,11 +568,11 @@ const PropertiesPage = () => {
                 </Button>
               </div>
 
-              <div className="space-y-12 mb-16">
-                {seoLinks.length > 0 && (
+              {seoLinks.length > 0 && (
+                <div className="space-y-12 mb-16">
                   <div>
                     <h3 className="text-lg font-bold text-[#1f2022] mb-6">
-                      Procure pelos principais bairros em {filters.searchLocation || "Rio de Janeiro"}
+                      Amplie as chances de encontrar o lar ideal em {filters.searchLocation || "sua região"} e arredores
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
                       {seoLinks.map((link, i) => (
@@ -582,56 +582,39 @@ const PropertiesPage = () => {
                       ))}
                     </div>
                   </div>
-                )}
-
-                <div>
-                  <h3 className="text-lg font-bold text-[#1f2022] mb-6">
-                    Amplie as chances de encontrar o lar ideal nas principais cidades
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
-                    {[
-                      "Aluguel em São Caetano do Sul", "Aluguel em Santo André", "Aluguel em Taboão da Serra", "Aluguel em Embu das Artes",
-                      "Aluguel em Diadema", "Aluguel em São Bernardo do Campo", "Aluguel em Carapicuíba",
-                      "Aluguel em Guarulhos", "Aluguel em Osasco", "Aluguel em Mauá"
-                    ].map((link, i) => (
-                      <a key={i} href="#" className="text-sm text-gray-800 underline hover:text-blue-600 decoration-1 underline-offset-2 font-medium block">
-                        {link}
-                      </a>
-                    ))}
-                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex flex-col md:flex-row gap-8 pb-16">
                 <div className="w-full md:w-1/3">
                   <h3 className="text-xl font-bold text-[#1f2022] leading-tight">
-                    Perguntas frequentes sobre comprar imóvel em São Paulo
+                    Perguntas frequentes sobre {filters.operationType === 'rent' ? 'alugar' : 'comprar'} imóvel em {filters.searchLocation || "sua região"}
                   </h3>
                 </div>
                 <div className="w-full md:w-2/3">
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1">
                       <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
-                        Quais são os documentos necessários para comprar imóvel em São Paulo?
+                        Quais são os documentos necessários para {filters.operationType === 'rent' ? 'alugar' : 'comprar'} imóvel em {filters.searchLocation || "sua região"}?
                       </AccordionTrigger>
                       <AccordionContent className="text-gray-600">
-                        Para comprar um imóvel, geralmente são necessários documentos como RG, CPF, comprovante de residência, comprovante de renda e certidões negativas. O QuintoAndar auxilia em toda essa documentação.
+                        Para {filters.operationType === 'rent' ? 'alugar' : 'comprar'} um imóvel, geralmente são necessários documentos como RG, CPF, comprovante de residência, comprovante de renda e certidões negativas. A R7 Consultoria auxilia em toda essa documentação para garantir um processo seguro e ágil.
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="item-2">
                       <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
-                        Quais os benefícios de comprar imóvel em São Paulo pelo QuintoAndar?
+                        Quais os benefícios de {filters.operationType === 'rent' ? 'alugar' : 'comprar'} imóvel em {filters.searchLocation || "sua região"} pela R7 Consultoria?
                       </AccordionTrigger>
                       <AccordionContent className="text-gray-600">
-                        Oferecemos fotos profissionais, tour virtual, negociação online transparente, assessoria jurídica completa e as melhores taxas de financiamento do mercado.
+                        Oferecemos atendimento personalizado, assessoria jurídica completa, negociação transparente e as melhores oportunidades do mercado, garantindo tranquilidade em cada etapa do processo.
                       </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="item-3">
                       <AccordionTrigger className="text-sm text-left hover:no-underline font-normal text-gray-800">
-                        Posso comprar imóvel em São Paulo pelo QuintoAndar utilizando o FGTS?
+                        Posso {filters.operationType === 'rent' ? 'alugar' : 'comprar'} imóvel em {filters.searchLocation || "sua região"} pela R7 Consultoria utilizando o FGTS?
                       </AccordionTrigger>
                       <AccordionContent className="text-gray-600">
-                        Sim, é possível utilizar o saldo do FGTS para a compra do seu imóvel, desde que você e o imóvel se enquadrem nas regras do SFH (Sistema Financeiro de Habitação).
+                        Sim, é possível utilizar o saldo do FGTS para a compra do seu imóvel, desde que você e o imóvel se enquadrem nas regras do SFH (Sistema Financeiro de Habitação). Nossa equipe pode orientar você sobre todos os detalhes.
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
