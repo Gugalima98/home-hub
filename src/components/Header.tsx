@@ -86,7 +86,7 @@ const Header = ({ variant = "default" }: HeaderProps) => {
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle className="text-left flex items-center gap-2">
-                   <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
+                  <div className="flex h-7 w-7 items-center justify-center rounded bg-primary">
                     <span className="text-sm font-bold text-primary-foreground">R7</span>
                   </div>
                   Menu
@@ -96,7 +96,7 @@ const Header = ({ variant = "default" }: HeaderProps) => {
                 {navItems.map((item) => (
                   <div key={item.label} className="border-b border-gray-100 pb-2">
                     <SheetClose asChild>
-                      <Link 
+                      <Link
                         to={item.path}
                         className="flex w-full items-center gap-2 py-2 text-base font-medium text-gray-700"
                       >
@@ -106,7 +106,7 @@ const Header = ({ variant = "default" }: HeaderProps) => {
                     </SheetClose>
                   </div>
                 ))}
-                
+
                 <div className="mt-4">
                   {user ? (
                     <div className="flex flex-col gap-2">
@@ -119,7 +119,7 @@ const Header = ({ variant = "default" }: HeaderProps) => {
                           <span className="text-xs text-muted-foreground truncate max-w-[200px]">{user.email}</span>
                         </div>
                       </div>
-                      
+
                       <SheetClose asChild>
                         <Link to="/dashboard">
                           <Button variant="outline" className="w-full justify-start gap-2">
@@ -177,49 +177,49 @@ const Header = ({ variant = "default" }: HeaderProps) => {
 
           {/* Login Button or User Dropdown */}
           {user ? (
-             <DropdownMenu>
-               <DropdownMenuTrigger asChild>
-                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                   <Avatar className="h-10 w-10 border border-gray-200">
-                     <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                       {getUserInitials()}
-                     </AvatarFallback>
-                   </Avatar>
-                 </Button>
-               </DropdownMenuTrigger>
-               <DropdownMenuContent className="w-56" align="end" forceMount>
-                 <DropdownMenuLabel className="font-normal">
-                   <div className="flex flex-col space-y-1">
-                     <p className="text-sm font-medium leading-none">{profile?.full_name || "Usuário"}</p>
-                     <p className="text-xs leading-none text-muted-foreground">
-                       {user.email}
-                     </p>
-                   </div>
-                 </DropdownMenuLabel>
-                 <DropdownMenuSeparator />
-                 <DropdownMenuItem asChild>
-                   <Link to="/dashboard" className="cursor-pointer w-full flex items-center">
-                     <LayoutDashboard className="mr-2 h-4 w-4" />
-                     Meu Painel
-                   </Link>
-                 </DropdownMenuItem>
-                 
-                 {profile?.role === 'admin' && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" className="cursor-pointer w-full flex items-center">
-                        <Key className="mr-2 h-4 w-4" />
-                        Administração
-                      </Link>
-                    </DropdownMenuItem>
-                 )}
-                 
-                 <DropdownMenuSeparator />
-                 <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600 cursor-pointer">
-                   <LogOut className="mr-2 h-4 w-4" />
-                   Sair
-                 </DropdownMenuItem>
-               </DropdownMenuContent>
-             </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-10 w-10 border border-gray-200">
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{profile?.full_name || "Usuário"}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="cursor-pointer w-full flex items-center">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Meu Painel
+                  </Link>
+                </DropdownMenuItem>
+
+                {profile?.role === 'admin' && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="cursor-pointer w-full flex items-center">
+                      <Key className="mr-2 h-4 w-4" />
+                      Administração
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link to="/login">
               <Button

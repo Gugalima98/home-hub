@@ -14,15 +14,28 @@ export interface Property {
   city: string;
   state: string;
   price: number;
-  condo_fee: number;
-  total_price: number; // Campo gerado no banco ou calculado
+  condo_fee?: number;
+  iptu?: number;
+  fire_insurance?: number;
+  service_fee?: number;
+  total_price?: number;
   area: number;
   bedrooms: number;
+  suites?: number;
+  bathrooms?: number;
   parking_spots: number;
-  images: Record<string, string[]>; // JSONB { "Sala": ["url"], ... }
-  badges: string[];
-  is_favorite: boolean;
+  images: Record<string, string[]>;
+  badges?: string[];
+  is_favorite?: boolean;
   operation_type: string;
+  property_type?: string;
+  latitude?: number;
+  longitude?: number;
+  furnished?: boolean;
+  pet_friendly?: boolean;
+  available_items?: string[];
+  unavailable_items?: string[];
+  condo_amenities?: string[];
 }
 
 interface PropertyCardProps {
@@ -46,7 +59,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
     // Prioriza categorias principais se quiser ordenar (ex: Fachada primeiro)
     const allImages: string[] = [];
     const categories = ["Fachada", "Sala", "Cozinha", "Quartos", "Banheiros", "Varanda", "Garagem", "Quintal", "Vista", "Área de Serviço", "Planta", "Outros"];
-    
+
     // Adiciona na ordem de prioridade
     categories.forEach(cat => {
       if (property.images[cat]) {
@@ -107,9 +120,8 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
   if (variant === "horizontal") {
     return (
       <motion.div
-        className={`bg-card rounded-xl overflow-hidden cursor-pointer transition-all duration-300 border ${
-          isHighlighted ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md border-border"
-        }`}
+        className={`bg-card rounded-xl overflow-hidden cursor-pointer transition-all duration-300 border ${isHighlighted ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md border-border"
+          }`}
         onMouseEnter={() => onHover?.(property.id)}
         onMouseLeave={() => onHover?.(null)}
         onClick={() => onClick?.(property.id)}
@@ -182,9 +194,8 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
                   className="p-1.5 rounded-full hover:bg-muted transition-colors"
                 >
                   <Heart
-                    className={`h-5 w-5 transition-colors ${
-                      isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                    }`}
+                    className={`h-5 w-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                      }`}
                   />
                 </button>
               </div>
@@ -262,9 +273,8 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
               {imageList.slice(0, 5).map((_, index) => (
                 <div
                   key={index}
-                  className={`w-1.5 h-1.5 rounded-full shadow-sm transition-all ${
-                    index === currentImageIndex ? "bg-white scale-125" : "bg-white/60"
-                  }`}
+                  className={`w-1.5 h-1.5 rounded-full shadow-sm transition-all ${index === currentImageIndex ? "bg-white scale-125" : "bg-white/60"
+                    }`}
                 />
               ))}
             </div>
@@ -277,9 +287,8 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
           className="absolute top-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white transition-all shadow-sm z-10 opacity-0 group-hover:opacity-100"
         >
           <Heart
-            className={`h-4 w-4 transition-colors ${
-              isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
-            }`}
+            className={`h-4 w-4 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
+              }`}
           />
         </button>
 

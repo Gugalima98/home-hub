@@ -40,7 +40,7 @@ type AvailableLocation = {
 
 const HeroSection = () => {
   const [searchType, setSearchType] = useState<"buscar" | "anunciar">("buscar");
-  const [rentOrBuy, setRentOrBuy] = useState<"rent" | "buy">("rent");
+  const [rentOrBuy, setRentOrBuy] = useState<"rent" | "buy">("buy");
   const navigate = useNavigate();
 
   const [selectedCity, setSelectedCity] = useState<string>('');
@@ -189,24 +189,14 @@ const HeroSection = () => {
           {/* Title */}
           <div className="space-y-2 text-center md:text-left">
             <h1 className="text-3xl md:text-[2.75rem] leading-[1.1] font-bold text-[#1f2022] tracking-tight">
-              Alugue um lar
+              Encontre o imóvel
               <br className="hidden md:block" />
-              {" "}para chamar de seu
+              {" "}dos seus sonhos
             </h1>
           </div>
 
           {/* Rent/Buy Tabs */}
           <div className="flex justify-center md:justify-start gap-6 border-b border-gray-200">
-              <button 
-                  onClick={() => setRentOrBuy('rent')}
-                  className={`text-sm font-medium pb-3 transition-all relative ${
-                    rentOrBuy === 'rent' 
-                      ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-              >
-                  Alugar
-              </button>
               <button 
                   onClick={() => setRentOrBuy('buy')}
                   className={`text-sm font-medium pb-3 transition-all relative ${
@@ -216,6 +206,16 @@ const HeroSection = () => {
                   }`}
               >
                   Comprar
+              </button>
+              <button 
+                  onClick={() => setRentOrBuy('rent')}
+                  className={`text-sm font-medium pb-3 transition-all relative ${
+                    rentOrBuy === 'rent' 
+                      ? 'text-primary after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary' 
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+              >
+                  Alugar
               </button>
           </div>
 

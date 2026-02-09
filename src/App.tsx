@@ -32,6 +32,7 @@ import AdminPropertyForm from "./pages/admin/AdminPropertyForm";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSeoCities from "./pages/admin/AdminSeoCities";
 import AdminSeoListing from "./pages/admin/AdminSeoListing";
+import AdminLeads from "./pages/admin/AdminLeads";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="seo-cities" element={<AdminSeoCities />} />
                 <Route path="seo-listing" element={<AdminSeoListing />} />
+                <Route path="leads" element={<AdminLeads />} />
               </Route>
 
               {/* Catch-all */}

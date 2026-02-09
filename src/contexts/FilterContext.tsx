@@ -4,11 +4,11 @@ interface FilterState {
   // Filtros Básicos
   operationType: "rent" | "buy";
   searchLocation: string; // Busca textual (Cidade, Bairro)
-  
+
   // Filtros de Preço
   priceMin: number | null;
   priceMax: number | null;
-  
+
   // Detalhes
   propertyTypes: string[]; // ["Apartamento", "Casa"]
   bedrooms: number | null; // 1, 2, 3, 4 (onde 4 significa 4+)
@@ -17,13 +17,13 @@ interface FilterState {
   parkingSpots: number | null;
   areaMin: number | null;
   areaMax: number | null;
-  
+
   // Características Específicas (Booleanos ou Arrays)
   furnished: string; // "yes", "no", "any"
   petFriendly: string; // "yes", "no", "any"
   nearSubway: string; // "yes", "no", "any"
   availability: string; // "any", "immediate", "soon"
-  
+
   // Arrays de Checkboxes
   amenities: string[]; // Academia, Piscina, etc.
 }
@@ -36,7 +36,7 @@ interface FilterContextType {
 }
 
 const defaultFilters: FilterState = {
-  operationType: "rent",
+  operationType: "buy",
   searchLocation: "",
   priceMin: null,
   priceMax: null,

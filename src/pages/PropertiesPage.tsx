@@ -36,39 +36,39 @@ const PropertiesPage = () => {
   const [searchParams] = useSearchParams();
   const params = useParams();
   const location = useLocation();
-  
+
   const routeOperation = params.operation;
   const locationSlug = params.locationSlug;
-  const urlFilters = params["*"]; 
-  
+  const urlFilters = params["*"];
+
   // Ref to track if we have synced initial URL state to filters
   const isInitialMount = useRef(true);
 
   // --- DERIVED STATE (Synchronous URL Parsing) ---
   const parseLocationSlug = (slug?: string) => {
     if (!slug) return { city: null, neighborhood: null };
-    
+
     const citySuffixes = [
-        { slug: '-rio-de-janeiro-rj-brasil', city: 'Rio de Janeiro' },
-        { slug: '-sao-paulo-sp-brasil', city: 'São Paulo' }
+      { slug: '-rio-de-janeiro-rj-brasil', city: 'Rio de Janeiro' },
+      { slug: '-sao-paulo-sp-brasil', city: 'São Paulo' }
     ];
 
     for (const suffix of citySuffixes) {
-        if (slug.endsWith(suffix.slug)) {
-            const neighborhoodPart = slug.substring(0, slug.length - suffix.slug.length);
-            let neighborhood = null;
-            if (neighborhoodPart.length > 0) {
-                neighborhood = neighborhoodPart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                neighborhood = neighborhood.replace(/\bDe\b/g, 'de').replace(/\bDa\b/g, 'da').replace(/\bDo\b/g, 'do');
-            }
-            return { city: suffix.city, neighborhood };
+      if (slug.endsWith(suffix.slug)) {
+        const neighborhoodPart = slug.substring(0, slug.length - suffix.slug.length);
+        let neighborhood = null;
+        if (neighborhoodPart.length > 0) {
+          neighborhood = neighborhoodPart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          neighborhood = neighborhood.replace(/\bDe\b/g, 'de').replace(/\bDa\b/g, 'da').replace(/\bDo\b/g, 'do');
         }
+        return { city: suffix.city, neighborhood };
+      }
     }
-    
+
     // Fallback: Assume whole slug is city if no suffix matched
     if (slug === 'rio-de-janeiro-rj-brasil') return { city: 'Rio de Janeiro', neighborhood: null };
     if (slug === 'sao-paulo-sp-brasil') return { city: 'São Paulo', neighborhood: null };
-    
+
     // Generic fallback
     let clean = slug.replace(/-[a-z]{2}-brasil$/, '').replace(/-brasil$/, '');
     const city = clean.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -86,7 +86,7 @@ const PropertiesPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
-  
+
   // Sorting & Pagination
   const [sortOrder, setSortOrder] = useState<SortOption>("newest");
   const [page, setPage] = useState(0);
@@ -94,120 +94,148 @@ const PropertiesPage = () => {
 
   const navigate = useNavigate();
 
-  // 1. SYNC URL TO FILTERS (One time on mount/param change)
+  // Ref for filters to avoid dependency cycles in useEffect
+  const filtersRef = useRef(filters);
   useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  // 1. SYNC URL TO FILTERS (Runs when URL changes)
+  useEffect(() => {
+    const currentFilters = filtersRef.current;
     const newFilters: any = {};
     let hasChanges = false;
 
-    // Operation
+    // Operation based on Route
     if (routeOperation) {
-      if (routeOperation === 'alugar' && filters.operationType !== 'rent') {
+      if (routeOperation === 'alugar' && currentFilters.operationType !== 'rent') {
         newFilters.operationType = 'rent';
         hasChanges = true;
-      } else if (routeOperation === 'comprar' && filters.operationType !== 'buy') {
+      } else if (routeOperation === 'comprar' && currentFilters.operationType !== 'buy') {
         newFilters.operationType = 'buy';
         hasChanges = true;
       }
     }
 
-    // Location
+    // Operation based on Query Params
+    const queryOp = searchParams.get('operation');
+    if (queryOp) {
+      if (queryOp === 'rent' && currentFilters.operationType !== 'rent') {
+        newFilters.operationType = 'rent';
+        hasChanges = true;
+      } else if (queryOp === 'buy' && currentFilters.operationType !== 'buy') {
+        newFilters.operationType = 'buy';
+        hasChanges = true;
+      }
+    }
+
+    // Location Slug
     if (locationSlug) {
-        let foundCity = null;
-        if (locationSlug.endsWith('-rio-de-janeiro-rj-brasil') || locationSlug === 'rio-de-janeiro-rj-brasil') foundCity = 'Rio de Janeiro';
-        else if (locationSlug.endsWith('-sao-paulo-sp-brasil') || locationSlug === 'sao-paulo-sp-brasil') foundCity = 'São Paulo';
-        
-        if (foundCity && filters.searchLocation !== foundCity) {
-             newFilters.searchLocation = foundCity;
-             hasChanges = true;
-        }
+      let foundCity = null;
+      if (locationSlug.endsWith('-rio-de-janeiro-rj-brasil') || locationSlug === 'rio-de-janeiro-rj-brasil') foundCity = 'Rio de Janeiro';
+      else if (locationSlug.endsWith('-sao-paulo-sp-brasil') || locationSlug === 'sao-paulo-sp-brasil') foundCity = 'São Paulo';
+
+      if (foundCity && currentFilters.searchLocation !== foundCity) {
+        newFilters.searchLocation = foundCity;
+        hasChanges = true;
+      }
+    }
+
+    // Location Query Param (e.g. from Hero Search)
+    const queryLocation = searchParams.get('location');
+    if (queryLocation && queryLocation !== currentFilters.searchLocation) {
+      newFilters.searchLocation = queryLocation;
+      hasChanges = true;
     }
 
     // Parse Wildcard Filters
     if (urlFilters) {
-        const parsed = parseUrlFilters(urlFilters);
-        Object.keys(parsed).forEach(key => {
-            // @ts-ignore
-            if (JSON.stringify(filters[key]) !== JSON.stringify(parsed[key])) {
-                // @ts-ignore
-                newFilters[key] = parsed[key];
-                hasChanges = true;
-            }
-        });
+      const parsed = parseUrlFilters(urlFilters);
+      Object.keys(parsed).forEach(key => {
+        // @ts-ignore
+        if (JSON.stringify(currentFilters[key]) !== JSON.stringify(parsed[key])) {
+          // @ts-ignore
+          newFilters[key] = parsed[key];
+          hasChanges = true;
+        }
+      });
     }
 
     if (hasChanges) {
-        setManyFilters(newFilters);
+      setManyFilters(newFilters);
+      // Keep isInitialMount true until we stabilize
+    } else {
+      isInitialMount.current = false;
     }
-    
-    isInitialMount.current = false;
 
-  }, [routeOperation, locationSlug, urlFilters]); 
+  }, [routeOperation, locationSlug, urlFilters, searchParams]);
 
-  // 2. SYNC FILTERS TO URL
+  // 2. SYNC FILTERS TO URL (Canonicalization)
   useEffect(() => {
-      if (isInitialMount.current) return;
+    if (isInitialMount.current) return;
 
-      const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
-      const currentLocSlug = locationSlug || "rio-de-janeiro-rj-brasil"; // Fallback if lost
-      
-      const filterSegment = generateUrlFilters(filters);
-      
-      const newPath = `/${op}/imovel/${currentLocSlug}${filterSegment ? '/' + filterSegment : ''}`;
-      const currentPath = window.location.pathname;
-      
-      if (currentPath !== newPath && decodeURIComponent(currentPath) !== newPath) {
-          // AQUI: PRESERVANDO O STATE (COORDENADAS) AO NAVEGAR
-          navigate(newPath, { replace: true, state: location.state });
-      }
+    const op = filters.operationType === 'buy' ? 'comprar' : 'alugar';
+    const currentLocSlug = locationSlug || "rio-de-janeiro-rj-brasil"; // Fallback if lost
+
+    const filterSegment = generateUrlFilters(filters);
+
+    const newPath = `/${op}/imovel/${currentLocSlug}${filterSegment ? '/' + filterSegment : ''}`;
+    const currentPath = window.location.pathname;
+
+    // Avoid redirect loop if semantic content is same
+    if (currentPath !== newPath && decodeURIComponent(currentPath) !== newPath) {
+      navigate(newPath, { replace: true, state: location.state });
+    }
 
   }, [filters, locationSlug]);
 
   // Reset pagination when filters change
   useEffect(() => {
+    if (isInitialMount.current) return;
     setPage(0);
     setHasMore(true);
     fetchProperties(0, true);
   }, [filters, sortOrder, locationSlug]);
 
-    const fetchTopNeighborhoods = async () => {
-      const { data, error } = await supabase.rpc('get_top_neighborhoods', {
-        target_city: filters.searchLocation || 'Rio de Janeiro',
-        target_operation: filters.operationType
-      });
+  const fetchTopNeighborhoods = async () => {
+    const { data, error } = await supabase.rpc('get_top_neighborhoods', {
+      target_city: filters.searchLocation || 'Rio de Janeiro',
+      target_operation: filters.operationType
+    });
 
-      if (!error && data) {
-        setTopNeighborhoods(data);
-      }
-    };
+    if (!error && data) {
+      setTopNeighborhoods(data);
+    }
+  };
 
-    const fetchSeoLinks = async () => {
-      const city = filters.searchLocation || 'Rio de Janeiro';
-      const op = filters.operationType || 'rent'; 
+  const fetchSeoLinks = async () => {
+    const city = filters.searchLocation || 'Rio de Janeiro';
+    const op = filters.operationType || 'rent';
 
-      const { data, error } = await supabase
-        .from('seo_listing_links')
-        .select('links')
-        .ilike('city', `%${city}%`)
-        .eq('operation', op)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('seo_listing_links')
+      .select('links')
+      .ilike('city', `%${city}%`)
+      .eq('operation', op)
+      .maybeSingle();
 
-      if (data && data.links) {
-        // @ts-ignore
-        setSeoLinks(data.links);
-      } else {
-        setSeoLinks([]);
-      }
-    };
+    if (data && data.links) {
+      // @ts-ignore
+      setSeoLinks(data.links);
+    } else {
+      setSeoLinks([]);
+    }
+  };
 
-    useEffect(() => {
-      fetchTopNeighborhoods();
-      fetchSeoLinks();
-    }, [filters.searchLocation, filters.operationType]);
+  useEffect(() => {
+    fetchTopNeighborhoods();
+    fetchSeoLinks();
+  }, [filters.searchLocation, filters.operationType]);
 
   const fetchProperties = async (pageIndex: number, isReset: boolean = false) => {
     if (pageIndex === 0) setLoading(true);
     else setLoadingMore(true);
-    
+
     let query = supabase
       .from("properties")
       .select("*")
@@ -220,19 +248,19 @@ const PropertiesPage = () => {
 
     // Specific Neighborhood Filter (from URL Slug)
     const urlNeighborhood = searchParams.get("neighborhood");
-    
+
     if (slugNeighborhood) {
-       query = query.ilike("neighborhood", `%${slugNeighborhood}%`);
-       if (slugCity || filters.searchLocation) {
-          query = query.ilike("city", `%${slugCity || filters.searchLocation}%`);
-       }
-    } 
+      query = query.ilike("neighborhood", `%${slugNeighborhood}%`);
+      if (slugCity || filters.searchLocation) {
+        query = query.ilike("city", `%${slugCity || filters.searchLocation}%`);
+      }
+    }
     else if (urlNeighborhood) {
-         query = query.ilike("neighborhood", `%${urlNeighborhood}%`);
-         if (filters.searchLocation && filters.searchLocation !== urlNeighborhood) {
-            query = query.ilike("city", `%${filters.searchLocation}%`);
-         }
-    } 
+      query = query.ilike("neighborhood", `%${urlNeighborhood}%`);
+      if (filters.searchLocation && filters.searchLocation !== urlNeighborhood) {
+        query = query.ilike("city", `%${filters.searchLocation}%`);
+      }
+    }
     else if (filters.searchLocation) {
       query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
     }
@@ -338,12 +366,12 @@ const PropertiesPage = () => {
     const visibleProperties = properties.filter(property => {
       // @ts-ignore
       const lat = property.coordinates[0];
-       // @ts-ignore
+      // @ts-ignore
       const lng = property.coordinates[1];
-      
+
       const isInsideLat = lat <= bounds.north && lat >= bounds.south;
       const isInsideLng = lng <= bounds.east && lng >= bounds.west;
-      
+
       return isInsideLat && isInsideLng;
     });
 
@@ -362,32 +390,32 @@ const PropertiesPage = () => {
 
   const getSeoTitle = () => {
     const operation = filters.operationType === 'rent' ? 'Alugar' : 'Comprar';
-    const type = filters.propertyTypes.length > 0 
+    const type = filters.propertyTypes.length > 0
       ? filters.propertyTypes.join(', ') + (filters.propertyTypes.length > 1 ? 's' : '')
       : 'Imóveis';
     const location = filters.searchLocation ? `em ${filters.searchLocation}` : 'em São Paulo';
-    
+
     return `${type} para ${operation} ${location} | R7 Consultoria`;
   };
 
   const getSeoDescription = () => {
-     const operation = filters.operationType === 'rent' ? 'alugar' : 'comprar';
-     return `Encontre as melhores opções de imóveis para ${operation} em São Paulo. Casas, apartamentos e muito mais na R7 Consultoria.`;
+    const operation = filters.operationType === 'rent' ? 'alugar' : 'comprar';
+    return `Encontre as melhores opções de imóveis para ${operation} em São Paulo. Casas, apartamentos e muito mais na R7 Consultoria.`;
   };
 
   // Check for Legacy Redirect
   const legacyNeigh = searchParams.get("neighborhood");
   if (legacyNeigh) {
-      const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-      const nSlug = slugify(legacyNeigh);
-      const cityBase = "rio-de-janeiro-rj-brasil"; 
-      const newSlug = `${nSlug}-${cityBase}`;
-      let op = "alugar";
-      if (routeOperation) op = routeOperation;
-      else if (filters.operationType === 'buy') op = 'comprar';
-      else if (searchParams.get('operation') === 'buy') op = 'comprar';
-      
-      return <Navigate to={`/${op}/imovel/${newSlug}`} replace />;
+    const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+    const nSlug = slugify(legacyNeigh);
+    const cityBase = "rio-de-janeiro-rj-brasil";
+    const newSlug = `${nSlug}-${cityBase}`;
+    let op = "alugar";
+    if (routeOperation) op = routeOperation;
+    else if (filters.operationType === 'buy') op = 'comprar';
+    else if (searchParams.get('operation') === 'buy') op = 'comprar';
+
+    return <Navigate to={`/${op}/imovel/${newSlug}`} replace />;
   }
 
   // Get search coordinates directly from location state
@@ -395,7 +423,7 @@ const PropertiesPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO 
+      <SEO
         title={getSeoTitle()}
         description={getSeoDescription()}
       />
@@ -404,9 +432,8 @@ const PropertiesPage = () => {
 
       <div className="flex-1 flex relative">
         <div
-          className={`w-full lg:w-[60%] flex flex-col ${
-            showMap ? "hidden lg:flex" : "flex"
-          }`}
+          className={`w-full lg:w-[60%] flex flex-col ${showMap ? "hidden lg:flex" : "flex"
+            }`}
         >
           <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
             <div>
@@ -417,15 +444,15 @@ const PropertiesPage = () => {
                 à venda na área visível
               </p>
             </div>
-             <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
-                Mais relevantes
-                <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
-             </Button>
+            <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
+              Mais relevantes
+              <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
+            </Button>
           </div>
 
           <ScrollArea className="flex-1 bg-gray-50/50">
             <div className="p-4">
-              
+
               {loading && page === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -468,7 +495,7 @@ const PropertiesPage = () => {
                           .toLowerCase()
                           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                           .replace(/\s+/g, '-');
-                        
+
                         const neighborhoodSlug = slugify(item.neighborhood);
                         const citySlug = "rio-de-janeiro-rj-brasil";
                         const fullSlug = `${neighborhoodSlug}-${citySlug}`;
@@ -480,30 +507,30 @@ const PropertiesPage = () => {
                         <h3 className="text-lg font-bold text-[#1f2022] line-clamp-2">{item.neighborhood}</h3>
                         <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 shrink-0" />
                       </div>
-                      
+
                       <p className="text-sm text-gray-500 font-normal leading-relaxed mb-4">
-                        {item.count} imóveis para<br/>
+                        {item.count} imóveis para<br />
                         {filters.operationType === 'rent' ? 'alugar' : 'comprar'}.
                       </p>
-                      
+
                       <div className="mt-auto w-full">
                         <p className="text-xs text-gray-500 font-medium mb-0.5">Ver ofertas</p>
                       </div>
                     </button>
                   ))}
                   {topNeighborhoods.length === 0 && (
-                     <div className="col-span-full py-4 text-gray-500 text-sm">
-                        Nenhum bairro encontrado com esses critérios.
-                     </div>
+                    <div className="col-span-full py-4 text-gray-500 text-sm">
+                      Nenhum bairro encontrado com esses critérios.
+                    </div>
                   )}
                 </div>
-                
+
                 <div className="flex justify-end gap-3 mt-4">
                   <button className="w-10 h-10 rounded-full bg-[#f5f5f7] flex items-center justify-center hover:bg-[#ebebeb] transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                     <ChevronRight className="h-5 w-5 rotate-180" />
+                    <ChevronRight className="h-5 w-5 rotate-180" />
                   </button>
                   <button className="w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors text-[#1f2022]">
-                     <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -572,18 +599,17 @@ const PropertiesPage = () => {
         </div>
 
         <div
-          className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${
-            showMap ? "block" : "hidden lg:block"
-          }`}
+          className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${showMap ? "block" : "hidden lg:block"
+            }`}
         >
-           <MapComponent 
+          <MapComponent
             // @ts-ignore
-            properties={filteredProperties} 
-            hoveredPropertyId={hoveredPropertyId} 
+            properties={filteredProperties}
+            hoveredPropertyId={hoveredPropertyId}
             onMarkerClick={handleMarkerClick}
             onSearchArea={handleAreaSearch}
             centerCoordinates={searchCoordinates}
-           />
+          />
         </div>
 
         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">

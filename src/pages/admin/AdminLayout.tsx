@@ -14,15 +14,16 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  Settings, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  Settings,
+  LogOut,
   ShieldCheck,
   MapPin,
-  Link as LinkIcon
+  Link as LinkIcon,
+  MessageSquare
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -46,7 +47,7 @@ export default function AdminLayout() {
               </h1>
               <p className="text-xs text-gray-400 mt-1">Gerenciamento R7</p>
             </div>
-            
+
             <SidebarGroup>
               <SidebarGroupLabel className="text-gray-400">Sistema</SidebarGroupLabel>
               <SidebarGroupContent>
@@ -99,6 +100,14 @@ export default function AdminLayout() {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="hover:bg-white/10 text-gray-300 hover:text-white">
+                      <Link to="/admin/leads">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Leads</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -130,9 +139,9 @@ export default function AdminLayout() {
                 <span className="text-xs text-gray-400 truncate">{user?.email}</span>
               </div>
             </div>
-            <Button 
-              variant="destructive" 
-              className="w-full justify-start gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border-none" 
+            <Button
+              variant="destructive"
+              className="w-full justify-start gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border-none"
               onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4" />
@@ -149,7 +158,7 @@ export default function AdminLayout() {
               Ver Site
             </Button>
           </header>
-          
+
           <div className="flex-1 overflow-auto p-8">
             <Outlet />
           </div>
