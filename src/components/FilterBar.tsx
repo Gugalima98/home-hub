@@ -295,10 +295,10 @@ export default function FilterBar() {
 
   return (
     <>
-      <div className="h-[98px] w-full bg-transparent" aria-hidden="true" />
+      <div className="h-[150px] lg:h-[98px] w-full bg-transparent" aria-hidden="true" />
 
-      <div className="bg-white border-b fixed top-[60px] md:top-[69px] left-0 right-0 z-30 pt-4 pb-2 md:py-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]">
-        <div className="container-fluid px-4 md:px-8 flex flex-col items-stretch gap-4 lg:flex-row lg:items-center lg:gap-6">
+      <div className="bg-white border-b fixed top-[60px] md:top-[69px] left-0 right-0 z-30 pt-3 pb-2 md:py-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]">
+        <div className="container-fluid px-4 md:px-8 flex flex-col items-stretch gap-2 lg:flex-row lg:items-center lg:gap-6">
 
           {/* Location Input & Dropdown */}
           <div className="relative flex-shrink-0 w-full lg:w-[460px]" ref={searchContainerRef}>
