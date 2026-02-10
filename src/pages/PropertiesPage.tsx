@@ -436,7 +436,8 @@ const PropertiesPage = () => {
         <div
           className={`w-full lg:w-[60%] flex flex-col ${showMap ? "hidden lg:flex" : "flex"}`}
         >
-          <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
+          {/* Desktop Header */}
+          <div className="hidden lg:flex px-6 py-4 border-b bg-background items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-[#1f2022]">
                 {filteredProperties.length} imóveis
@@ -448,6 +449,21 @@ const PropertiesPage = () => {
             <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
               Mais relevantes
               <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
+            </Button>
+          </div>
+
+          {/* Mobile Header (QuintoAndar Style) */}
+          <div className="lg:hidden px-4 pt-6 pb-2 bg-background flex items-center justify-between">
+            <div className="flex flex-col">
+              <h1 className="text-[22px] font-bold text-[#1f2022] leading-tight">
+                {new Intl.NumberFormat('pt-BR').format(filteredProperties.length)} imóveis
+              </h1>
+              <p className="text-sm text-gray-600">
+                para {filters.operationType === 'rent' ? 'alugar' : 'comprar'} {filters.searchLocation ? `em ${filters.searchLocation}` : 'em São Paulo, SP'}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" className="text-[#1f2022]">
+              <SlidersHorizontal className="h-6 w-6 rotate-90" /> {/* Using SlidersHorizontal as a sort-like icon as per reference visual style */}
             </Button>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, MapPin, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -262,6 +262,21 @@ export function FiltersSidebar({ children }: FiltersSidebarProps) {
         {/* Content */}
         <ScrollArea className="flex-1 bg-white">
           <div className="px-6 py-6 space-y-10 pb-32">
+
+            {/* Localização - Added inside Filters Sidebar */}
+            <div>
+              <FilterSectionTitle>Localização</FilterSectionTitle>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={filters.searchLocation?.toLowerCase().includes("rio de janeiro") ? "Qualquer lugar no Rio de Janeiro, RJ" : "Qualquer lugar em São Paulo, SP"}
+                  className="w-full h-14 rounded-xl border border-gray-300 bg-white pl-12 pr-4 text-base font-normal text-[#1f2022] focus:outline-none focus:border-[#3b44c6] focus:ring-1 focus:ring-[#3b44c6] transition-all"
+                  value={localFilters.searchLocation}
+                  onChange={(e) => updateLocalFilter("searchLocation", e.target.value)}
+                />
+              </div>
+            </div>
 
             {/* Valor */}
             <div>
