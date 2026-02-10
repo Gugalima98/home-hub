@@ -238,7 +238,7 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
       layout
     >
       {/* Image Carousel */}
-      <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-gray-100">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-gray-100">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
@@ -312,33 +312,36 @@ const PropertyCard = ({ property, isHighlighted, onHover, onClick, variant = "gr
       <div className="flex flex-col gap-0.5">
         {/* Title/Description */}
         <p className="text-xs text-gray-500 line-clamp-1 font-normal mb-0.5">
-          {property.description}
+          {property.description || `${property.property_type || 'Imóvel'} para ${property.operation_type === 'rent' ? 'alugar' : 'comprar'} em ${property.neighborhood}.`}
         </p>
 
-        {/* Price */}
-        <div className="flex items-baseline">
-          <span className="text-lg font-bold text-[#1f2022]">
-            {formatPrice(totalPrice)}
+        {/* Price Section - Parity with Image */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xl font-bold text-[#1f2022]">
+            {formatPrice(property.price)}
+          </span>
+          <span className="text-sm font-bold text-[#1f2022]">
+            {property.operation_type === 'rent' ? 'aluguel' : 'venda'}
           </span>
         </div>
 
-        {/* Price Breakdown */}
-        <p className="text-[11px] text-gray-500 mb-1.5">
-          {formatPrice(property.price)} + Cond. {formatPrice(property.condo_fee || 0)}
+        {/* Total Price - Parity with Image */}
+        <p className="text-sm text-gray-500 mb-2">
+          {formatPrice(totalPrice)} total
         </p>
 
-        {/* Features */}
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#3e4245] mb-1">
+        {/* Features - Parity with Image (· as separator) */}
+        <div className="flex items-center gap-1.5 text-sm font-bold text-[#1f2022] mb-1">
           <span>{property.area} m²</span>
-          <span className="text-gray-300">•</span>
+          <span className="text-gray-400 font-normal">·</span>
           <span>{property.bedrooms} {property.bedrooms === 1 ? 'quarto' : 'quartos'}</span>
-          <span className="text-gray-300">•</span>
+          <span className="text-gray-400 font-normal">·</span>
           <span>{property.parking_spots} {property.parking_spots === 1 ? 'vaga' : 'vagas'}</span>
         </div>
 
         {/* Address */}
-        <p className="text-[11px] text-gray-500 line-clamp-1 font-normal">
-          {property.address} · {property.neighborhood}
+        <p className="text-sm text-gray-500 line-clamp-1 font-normal">
+          {property.address}, {property.neighborhood} · {property.city}
         </p>
       </div>
     </motion.div>

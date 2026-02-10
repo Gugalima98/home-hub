@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -41,6 +41,9 @@ const PropertyDetailPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeTab, setActiveTab] = useState<'available' | 'unavailable'>('available');
+  const [similarProperties, setSimilarProperties] = useState<Property[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Fetch Property
   useEffect(() => {
@@ -74,6 +77,41 @@ const PropertyDetailPage = () => {
 
     fetchProperty();
   }, [code]);
+
+  // Fetch Similar Properties
+  useEffect(() => {
+    const fetchSimilar = async () => {
+      if (!property) return;
+      setLoadingSimilar(true);
+      try {
+        const { data, error } = await supabase
+          .from("properties")
+          .select("*")
+          .eq("status", "active")
+          .eq("operation_type", property.operation_type)
+          .neq("id", property.id)
+          .or(`neighborhood.ilike.%${property.neighborhood}%,city.ilike.%${property.city}%`)
+          .limit(10);
+
+        if (error) throw error;
+        setSimilarProperties(data || []);
+      } catch (err) {
+        console.error("Error fetching similar properties:", err);
+      } finally {
+        setLoadingSimilar(false);
+      }
+    };
+
+    fetchSimilar();
+  }, [property]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   // Flatten Images Helper
   const imageList = useMemo(() => {
@@ -175,8 +213,8 @@ const PropertyDetailPage = () => {
       />
       <Header />
 
-      <div className="bg-white border-b border-gray-100 pb-20 lg:pb-0"> {/* Added padding bottom for mobile sticky footer */}
-        <div className="h-auto lg:h-[600px] flex flex-col lg:flex-row gap-6 bg-white overflow-hidden">
+      <div className="bg-white"> {/* Removed border-b and extra padding for mobile */}
+        <div className="h-auto lg:h-[600px] flex flex-col lg:flex-row lg:gap-6 gap-0 bg-white overflow-hidden">
 
           {/* Desktop Sidebar - Hidden on Mobile */}
           <div className="hidden lg:flex lg:w-[36%] shrink-0 bg-[#f8f9fa] p-6 lg:p-8 flex-col justify-between overflow-y-auto relative z-10">
@@ -196,21 +234,23 @@ const PropertyDetailPage = () => {
                 </p>
               </div>
 
-              <div className="flex gap-4">
-                <Button className="flex-1 h-12 rounded-full bg-[#3b44c6] hover:bg-[#2a308c] text-white font-bold text-sm px-6">
-                  Agendar visita
-                </Button>
-                <Button variant="outline" className="flex-1 h-12 rounded-full border-gray-200 text-[#1f2022] font-bold text-sm hover:bg-gray-50 px-6">
-                  Fazer proposta
-                </Button>
-              </div>
+              <Button
+                className="w-full rounded-full h-12 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-base shadow-sm gap-2"
+                onClick={() => {
+                  const message = `Olá, gostaria de saber mais sobre o imóvel: ${property.title} (Cód. ${property.code})\nLink: ${window.location.href}`;
+                  window.open(`https://wa.me/5511978519899?text=${encodeURIComponent(message)}`, '_blank');
+                }}
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-5 h-5 filter brightness-0 invert" alt="WhatsApp" />
+                Chamar no WhatsApp
+              </Button>
             </div>
           </div>
 
           {/* Desktop Image Grid - Hidden on Mobile */}
-          <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
+          <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group cursor-pointer" onClick={() => { setGalleryInitialView("photos"); setShowAllPhotos(true); }}>
             <img
-              src={imageList[0]}
+              src={imageList[currentImageIndex]}
               alt="Foto Principal"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -253,9 +293,9 @@ const PropertyDetailPage = () => {
             </div>
           </div>
 
-          <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group">
+          <div className="flex-1 relative bg-gray-100 hidden lg:block overflow-hidden group cursor-pointer" onClick={() => { setGalleryInitialView("photos"); setShowAllPhotos(true); }}>
             <img
-              src={imageList[1] || imageList[0]}
+              src={imageList[(currentImageIndex + 1) % imageList.length]}
               alt="Foto Secundária"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -277,9 +317,9 @@ const PropertyDetailPage = () => {
           </div>
 
           {/* Mobile Layout Redesign */}
-          <div className="lg:hidden relative w-full bg-gray-100">
+          <div className="lg:hidden relative w-full bg-white">
             {/* Image Carousel */}
-            <div className="relative h-[65vh] w-full"> {/* Increased heavily based on user feedback */}
+            <div className="relative h-[65vh] w-full cursor-pointer" onClick={() => { setGalleryInitialView("photos"); setShowAllPhotos(true); }}>
               <img
                 src={imageList[currentImageIndex]}
                 alt={property.title}
@@ -443,7 +483,7 @@ const PropertyDetailPage = () => {
             </div>
 
             {/* Detailed Info Section (QuintoAndar Style) */}
-            <div className="mt-0 bg-white pb-4">
+            <div className="mt-0 bg-white lg:pb-4 pb-0">
 
               {/* Map Card (QuintoAndar Style - Exact Visual Match) */}
               <div
@@ -653,16 +693,29 @@ const PropertyDetailPage = () => {
                 </h1>
               </div>
 
-              <div className="hidden lg:block relative h-24 bg-gray-100 rounded-xl overflow-hidden mb-8 border border-gray-200 cursor-pointer hover:shadow-md transition-shadow group">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://maps.wikimedia.org/img/osm-intl,13,a,a,270x100.png')] bg-cover bg-center" />
-                <div className="absolute inset-0 bg-white/60" />
+              <div
+                className="hidden lg:block relative h-[180px] bg-[#eef2f5] rounded-xl overflow-hidden mb-8 border border-gray-100 cursor-pointer active:opacity-95 transition-opacity group"
+                onClick={() => {
+                  setGalleryInitialView("map");
+                  setShowAllPhotos(true);
+                }}
+              >
+                {/* Reliable Map Background (Local SVG from QuintoAndar) */}
+                <div className="absolute inset-0">
+                  <img
+                    src="https://static.quintoandar.com.br/find-webapp/images/listingMaps/desktop/type6.svg"
+                    className="w-full h-full object-cover"
+                    alt="Map Background"
+                  />
+                </div>
 
-                <div className="relative h-full flex items-center justify-between px-6 z-10">
-                  <div>
-                    <h2 className="text-lg font-bold text-[#1f2022]">{property.address}</h2>
-                    <p className="text-sm text-gray-600">{property.neighborhood}, {property.city}</p>
+                {/* Floating White Card - Centered & Rounded */}
+                <div className="absolute top-1/2 left-8 right-8 -translate-y-1/2 bg-white rounded-2xl p-6 shadow-[0_4px_16px_rgba(0,0,0,0.08)] flex items-center justify-between border border-gray-100 group-hover:shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-shadow">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-2xl font-bold text-[#1f2022] leading-snug truncate mb-1">{property.address}</h3>
+                    <p className="text-base text-gray-500 font-normal truncate">{property.neighborhood}, {property.city}</p>
                   </div>
-                  <ChevronRight className="h-6 w-6 text-[#1f2022] group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="h-8 w-8 text-[#1f2022] stroke-[1.5] shrink-0 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
 
@@ -879,9 +932,56 @@ const PropertyDetailPage = () => {
         </div>
       </div>
 
+      {/* Similar Properties Section (QuintoAndar Style) */}
+      {similarProperties.length > 0 && (
+        <div className="bg-white pb-16 lg:pt-4 pt-0">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <h2 className="text-2xl font-bold text-[#1f2022] mb-8">Similares na mesma região</h2>
+
+            <div className="relative">
+              {/* Scrollable Container */}
+              <div
+                ref={scrollRef}
+                className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {similarProperties.map((item) => (
+                  <div
+                    key={item.id}
+                    className="w-[85%] md:w-[45%] lg:w-[calc(33.333%-16px)] shrink-0 snap-start"
+                  >
+                    <PropertyCard
+                      property={item}
+                      onClick={(id) => navigate(`/imovel/${item.code || id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Navigation Buttons - Bottom Right as per image */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => scroll('left')}
+                  className="w-14 h-14 rounded-full bg-[#f3f5f6] flex items-center justify-center hover:bg-[#e5e7eb] transition-colors"
+                  aria-label="Anterior"
+                >
+                  <ChevronLeft className="h-6 w-6 text-[#1f2022]" />
+                </button>
+
+                <button
+                  onClick={() => scroll('right')}
+                  className="w-14 h-14 rounded-full bg-[#f3f5f6] flex items-center justify-center hover:bg-[#e5e7eb] transition-colors"
+                  aria-label="Próximo"
+                >
+                  <ChevronRight className="h-6 w-6 text-[#1f2022]" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Sticky Footer Removed as requested */}
-
-
 
       <Footer />
     </div >

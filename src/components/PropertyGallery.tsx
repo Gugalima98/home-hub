@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { X, Map as MapIcon, Image as ImageIcon, Heart, Share2, ArrowRight, ChevronRight } from "lucide-react";
+import { X, Map as MapIcon, Image as ImageIcon, Heart, Share2, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Property } from "@/components/PropertyCard";
 import { IMAGE_CATEGORIES } from "@/schemas/propertySchema";
@@ -16,14 +16,13 @@ export function PropertyGallery({ property, isOpen, onClose, initialView = "phot
     const [viewMode, setViewMode] = useState<"photos" | "map">(initialView);
     const [activeCategory, setActiveCategory] = useState<string>("Sala");
     const [isFavorite, setIsFavorite] = useState(property.is_favorite);
+    const [selectedImage, setSelectedImage] = useState<{ url: string, index: number, category: string } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             setViewMode(initialView);
         }
     }, [isOpen, initialView]);
-
-    if (!isOpen) return null;
 
     // Extract categories that actually have images
     const availableCategories = useMemo(() => {
@@ -38,6 +37,57 @@ export function PropertyGallery({ property, isOpen, onClose, initialView = "phot
             images: property.images[cat]
         }));
     }, [property.images]);
+
+    // List of all images with their categories for the carousel
+    const allImagesWithCategory = useMemo(() => {
+        const list: { url: string, category: string }[] = [];
+        availableCategories.forEach(cat => {
+            cat.images.forEach(img => {
+                list.push({ url: img, category: cat.name });
+            });
+        });
+        return list;
+    }, [availableCategories]);
+
+    const handleNextImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!selectedImage) return;
+        const nextIdx = (selectedImage.index + 1) % allImagesWithCategory.length;
+        setSelectedImage({
+            ...allImagesWithCategory[nextIdx],
+            index: nextIdx
+        });
+    };
+
+    const handlePrevImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!selectedImage) return;
+        const prevIdx = (selectedImage.index - 1 + allImagesWithCategory.length) % allImagesWithCategory.length;
+        setSelectedImage({
+            ...allImagesWithCategory[prevIdx],
+            index: prevIdx
+        });
+    };
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!selectedImage) return;
+            if (e.key === "ArrowRight") {
+                const nextIdx = (selectedImage.index + 1) % allImagesWithCategory.length;
+                setSelectedImage({ ...allImagesWithCategory[nextIdx], index: nextIdx });
+            } else if (e.key === "ArrowLeft") {
+                const prevIdx = (selectedImage.index - 1 + allImagesWithCategory.length) % allImagesWithCategory.length;
+                setSelectedImage({ ...allImagesWithCategory[prevIdx], index: prevIdx });
+            } else if (e.key === "Escape") {
+                setSelectedImage(null);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [selectedImage, allImagesWithCategory]);
+
+    if (!isOpen) return null;
 
     // Set default category
     useMemo(() => {
@@ -190,17 +240,24 @@ export function PropertyGallery({ property, isOpen, onClose, initialView = "phot
                             {currentImages.map((img, idx) => {
                                 // Inject map at 3rd position (index 2) automatically if strictly following the visual rhythm
                                 const isFirstCategory = activeCategory === "Sala" || activeCategory === availableCategories[0]?.name;
+                                const globalIndex = allImagesWithCategory.findIndex(item => item.url === img);
 
                                 return (
                                     <div key={idx} className="contents">
                                         {/* Standard Image Card */}
-                                        <div className="relative group rounded-md overflow-hidden cursor-pointer bg-gray-100 aspect-[4/3] shadow-sm hover:shadow-md transition-shadow">
+                                        <div
+                                            className="relative group rounded-md overflow-hidden cursor-pointer bg-gray-100 aspect-[4/3] shadow-sm hover:shadow-md transition-shadow"
+                                            onClick={() => setSelectedImage({ url: img, index: globalIndex, category: activeCategory })}
+                                        >
                                             <img
                                                 src={img}
                                                 alt={`${activeCategory} ${idx + 1}`}
-                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                 loading="lazy"
                                             />
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p className="text-white text-xs font-bold">{activeCategory} {idx + 1}</p>
+                                            </div>
                                         </div>
 
                                         {/* Map Card Injection (After 2nd image) */}
@@ -245,6 +302,60 @@ export function PropertyGallery({ property, isOpen, onClose, initialView = "phot
                     </div>
                 )}
             </div>
+            {/* Fullscreen Lightbox Carousel */}
+            {selectedImage && (
+                <div className="fixed inset-0 z-[60] bg-black flex flex-col animate-in zoom-in-95 duration-200">
+                    {/* Lightbox Header */}
+                    <div className="p-4 flex justify-between items-center bg-black/40 backdrop-blur-md z-10">
+                        <div className="flex flex-col">
+                            <span className="text-white font-bold text-lg">{selectedImage.category}</span>
+                            <span className="text-gray-400 text-sm font-medium">Foto {selectedImage.index + 1} de {allImagesWithCategory.length}</span>
+                        </div>
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    {/* Image Area */}
+                    <div className="flex-1 relative flex items-center justify-center p-4 md:p-12 overflow-hidden bg-black">
+                        <button
+                            onClick={handlePrevImage}
+                            className="absolute left-4 md:left-8 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10 backdrop-blur-sm"
+                        >
+                            <ChevronLeft className="w-8 h-8" />
+                        </button>
+
+                        <img
+                            src={selectedImage.url}
+                            alt={selectedImage.category}
+                            className="max-w-full max-h-full object-contain select-none shadow-2xl transition-all duration-300"
+                        />
+
+                        <button
+                            onClick={handleNextImage}
+                            className="absolute right-4 md:right-8 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10 backdrop-blur-sm"
+                        >
+                            <ChevronRight className="w-8 h-8" />
+                        </button>
+                    </div>
+
+                    {/* Thumbnails Strip */}
+                    <div className="hidden md:flex gap-3 p-6 bg-black/60 backdrop-blur-md overflow-x-auto justify-start md:justify-center scrollbar-hide border-t border-white/5">
+                        {allImagesWithCategory.map((item, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setSelectedImage({ ...item, index: idx })}
+                                className={`w-20 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImage.index === idx ? 'border-white opacity-100 scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-70'}`}
+                            >
+                                <img src={item.url} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
