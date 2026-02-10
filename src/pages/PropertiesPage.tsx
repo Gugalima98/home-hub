@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams, useParams, Navigate, useLocation } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, Navigate, useLocation, Link } from "react-router-dom";
 import { Map, List, Search, ChevronRight, Loader2, SlidersHorizontal, Bell, ArrowUpDown, ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -163,12 +163,13 @@ const PropertiesPage = () => {
 
     if (hasChanges) {
       setManyFilters(newFilters);
-      // Keep isInitialMount true until we stabilize
+      // Ensure the filters effect picks up subsequent changes even if it was the initial URL sync
+      isInitialMount.current = false;
     } else {
       isInitialMount.current = false;
+      // Triggers fetch when URL is already in sync with filters
       fetchProperties(0, true);
     }
-
   }, [routeOperation, locationSlug, urlFilters, searchParams]);
 
   // 2. SYNC FILTERS TO URL (Canonicalization)
@@ -234,107 +235,112 @@ const PropertiesPage = () => {
   }, [filters.searchLocation, filters.operationType]);
 
   const fetchProperties = async (pageIndex: number, isReset: boolean = false) => {
-    if (pageIndex === 0) setLoading(true);
-    else setLoadingMore(true);
+    try {
+      if (pageIndex === 0) setLoading(true);
+      else setLoadingMore(true);
 
-    let query = supabase
-      .from("properties")
-      .select("*")
-      .eq("status", "active");
+      let query = supabase
+        .from("properties")
+        .select("*")
+        .eq("status", "active");
 
-    // Apply Filters
-    if (filters.operationType) {
-      query = query.eq("operation_type", filters.operationType);
-    }
-
-    // Specific Neighborhood Filter (from URL Slug)
-    const urlNeighborhood = searchParams.get("neighborhood");
-
-    if (slugNeighborhood) {
-      query = query.ilike("neighborhood", `%${slugNeighborhood}%`);
-      if (slugCity || filters.searchLocation) {
-        query = query.ilike("city", `%${slugCity || filters.searchLocation}%`);
-      }
-    }
-    else if (urlNeighborhood) {
-      query = query.ilike("neighborhood", `%${urlNeighborhood}%`);
-      if (filters.searchLocation && filters.searchLocation !== urlNeighborhood) {
-        query = query.ilike("city", `%${filters.searchLocation}%`);
-      }
-    }
-    else if (filters.searchLocation) {
-      query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
-    }
-
-    if (filters.priceMin) query = query.gte("price", filters.priceMin);
-    if (filters.priceMax) query = query.lte("price", filters.priceMax);
-    if (filters.bedrooms) query = query.gte("bedrooms", filters.bedrooms);
-    if (filters.bathrooms) query = query.gte("bathrooms", filters.bathrooms);
-    if (filters.parkingSpots) query = query.gte("parking_spots", filters.parkingSpots);
-    if (filters.suites) query = query.gte("suites", filters.suites);
-    if (filters.areaMin) query = query.gte("area", filters.areaMin);
-    if (filters.areaMax) query = query.lte("area", filters.areaMax);
-
-    if (filters.propertyTypes.length > 0) {
-      query = query.in("property_type", filters.propertyTypes);
-    }
-
-    if (filters.furnished === "yes") query = query.eq("furnished", true);
-    if (filters.furnished === "no") query = query.eq("furnished", false);
-    if (filters.petFriendly === "yes") query = query.eq("pet_friendly", true);
-    if (filters.petFriendly === "no") query = query.eq("pet_friendly", false);
-    if (filters.nearSubway === "yes") query = query.eq("near_subway", true);
-    if (filters.nearSubway === "no") query = query.eq("near_subway", false);
-
-    if (filters.amenities.length > 0) {
-      query = query.contains("condo_amenities", filters.amenities);
-    }
-
-    // Apply Sorting
-    switch (sortOrder) {
-      case "newest":
-        query = query.order("created_at", { ascending: false });
-        break;
-      case "price_asc":
-        query = query.order("price", { ascending: true });
-        break;
-      case "price_desc":
-        query = query.order("price", { ascending: false });
-        break;
-      case "area_desc":
-        query = query.order("area", { ascending: false });
-        break;
-    }
-
-    // Apply Pagination
-    const from = pageIndex * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    query = query.range(from, to);
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching properties:", error);
-    } else {
-      const mappedProperties: Property[] = (data || []).map((p) => ({
-        ...p,
-        coordinates: [p.latitude || -23.5505, p.longitude || -46.6333],
-      }));
-
-      if (data && data.length < PAGE_SIZE) {
-        setHasMore(false);
+      // Apply Filters
+      if (filters.operationType) {
+        query = query.eq("operation_type", filters.operationType);
       }
 
-      if (isReset) {
-        setProperties(mappedProperties);
-        setFilteredProperties(mappedProperties);
+      // Specific Neighborhood Filter (from URL Slug)
+      const urlNeighborhood = searchParams.get("neighborhood");
+
+      if (slugNeighborhood) {
+        query = query.ilike("neighborhood", `%${slugNeighborhood}%`);
+        if (slugCity || filters.searchLocation) {
+          query = query.ilike("city", `%${slugCity || filters.searchLocation}%`);
+        }
+      }
+      else if (urlNeighborhood) {
+        query = query.ilike("neighborhood", `%${urlNeighborhood}%`);
+        if (filters.searchLocation && filters.searchLocation !== urlNeighborhood) {
+          query = query.ilike("city", `%${filters.searchLocation}%`);
+        }
+      }
+      else if (filters.searchLocation) {
+        query = query.or(`city.ilike.%${filters.searchLocation}%,neighborhood.ilike.%${filters.searchLocation}%,title.ilike.%${filters.searchLocation}%`);
+      }
+
+      if (filters.priceMin) query = query.gte("price", filters.priceMin);
+      if (filters.priceMax) query = query.lte("price", filters.priceMax);
+      if (filters.bedrooms) query = query.gte("bedrooms", filters.bedrooms);
+      if (filters.bathrooms) query = query.gte("bathrooms", filters.bathrooms);
+      if (filters.parkingSpots) query = query.gte("parking_spots", filters.parkingSpots);
+      if (filters.suites) query = query.gte("suites", filters.suites);
+      if (filters.areaMin) query = query.gte("area", filters.areaMin);
+      if (filters.areaMax) query = query.lte("area", filters.areaMax);
+
+      if (filters.propertyTypes.length > 0) {
+        query = query.in("property_type", filters.propertyTypes);
+      }
+
+      if (filters.furnished === "yes") query = query.eq("furnished", true);
+      if (filters.furnished === "no") query = query.eq("furnished", false);
+      if (filters.petFriendly === "yes") query = query.eq("pet_friendly", true);
+      if (filters.petFriendly === "no") query = query.eq("pet_friendly", false);
+      if (filters.nearSubway === "yes") query = query.eq("near_subway", true);
+      if (filters.nearSubway === "no") query = query.eq("near_subway", false);
+
+      if (filters.amenities.length > 0) {
+        query = query.contains("condo_amenities", filters.amenities);
+      }
+
+      // Apply Sorting
+      switch (sortOrder) {
+        case "newest":
+          query = query.order("created_at", { ascending: false });
+          break;
+        case "price_asc":
+          query = query.order("price", { ascending: true });
+          break;
+        case "price_desc":
+          query = query.order("price", { ascending: false });
+          break;
+        case "area_desc":
+          query = query.order("area", { ascending: false });
+          break;
+      }
+
+      // Apply Pagination
+      const from = pageIndex * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching properties:", error);
       } else {
-        setProperties(prev => [...prev, ...mappedProperties]);
-        setFilteredProperties(prev => [...prev, ...mappedProperties]);
+        const mappedProperties: Property[] = (data || []).map((p) => ({
+          ...p,
+          coordinates: [p.latitude || -23.5505, p.longitude || -46.6333],
+        }));
+
+        if (data && data.length < PAGE_SIZE) {
+          setHasMore(false);
+        }
+
+        if (isReset) {
+          setProperties(mappedProperties);
+          setFilteredProperties(mappedProperties);
+        } else {
+          setProperties(prev => [...prev, ...mappedProperties]);
+          setFilteredProperties(prev => [...prev, ...mappedProperties]);
+        }
       }
+    } catch (err) {
+      console.error("Critical error in fetchProperties:", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    setLoading(false);
-    setLoadingMore(false);
   };
 
   const handleLoadMore = () => {
@@ -381,7 +387,7 @@ const PropertiesPage = () => {
 
   const getSortLabel = (sort: SortOption) => {
     switch (sort) {
-      case "newest": return "Mais recentes";
+      case "newest": return "Mais relevantes";
       case "price_asc": return "Menor preço";
       case "price_desc": return "Maior preço";
       case "area_desc": return "Maior área";
@@ -446,10 +452,20 @@ const PropertiesPage = () => {
                 à venda na área visível
               </p>
             </div>
-            <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
-              Mais relevantes
-              <ChevronRight className="ml-1 h-4 w-4 rotate-90" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-sm font-semibold text-[#1f2022]">
+                  {getSortLabel(sortOrder)}
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px]">
+                <DropdownMenuItem onClick={() => setSortOrder("newest")}>Mais relevantes</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("price_asc")}>Menor preço</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("price_desc")}>Maior preço</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("area_desc")}>Maior área</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile Header (QuintoAndar Style) */}
@@ -462,9 +478,19 @@ const PropertiesPage = () => {
                 para {filters.operationType === 'rent' ? 'alugar' : 'comprar'} {filters.searchLocation ? `em ${filters.searchLocation}` : 'em São Paulo, SP'}
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="text-[#1f2022]">
-              <SlidersHorizontal className="h-6 w-6 rotate-90" /> {/* Using SlidersHorizontal as a sort-like icon as per reference visual style */}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#1f2022]">
+                  <SlidersHorizontal className="h-6 w-6 rotate-90" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px]">
+                <DropdownMenuItem onClick={() => setSortOrder("newest")} className={sortOrder === "newest" ? "font-bold" : ""}>Mais relevantes</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("price_asc")} className={sortOrder === "price_asc" ? "font-bold" : ""}>Menor preço</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("price_desc")} className={sortOrder === "price_desc" ? "font-bold" : ""}>Maior preço</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOrder("area_desc")} className={sortOrder === "area_desc" ? "font-bold" : ""}>Maior área</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <ScrollArea className="flex-1 bg-gray-50/50">
@@ -566,9 +592,13 @@ const PropertiesPage = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-8">
                       {seoLinks.map((link, i) => (
-                        <a key={i} href={link.url} className="text-sm text-gray-800 underline hover:text-blue-600 decoration-1 underline-offset-2 font-medium block">
+                        <Link
+                          key={i}
+                          to={link.url}
+                          className="text-sm text-gray-800 underline hover:text-blue-600 decoration-1 underline-offset-2 font-medium block"
+                        >
                           {link.label}
-                        </a>
+                        </Link>
                       ))}
                     </div>
                   </div>
