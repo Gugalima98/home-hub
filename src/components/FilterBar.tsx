@@ -295,9 +295,7 @@ export default function FilterBar() {
 
   return (
     <>
-      <div className="h-[150px] lg:h-[98px] w-full bg-transparent" aria-hidden="true" />
-
-      <div className="bg-white border-b fixed top-[60px] md:top-[69px] left-0 right-0 z-30 pt-3 pb-2 md:py-6 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.08)]">
+      <div className="bg-white pt-3 pb-2 md:py-6">
         <div className="container-fluid px-4 md:px-8 flex flex-col items-stretch gap-2 lg:flex-row lg:items-center lg:gap-6">
 
           {/* Location Input & Dropdown */}
@@ -400,7 +398,7 @@ export default function FilterBar() {
                         {debouncedSearchTerm.length < 3 ? "Digite mais para buscar..." : "Nenhum local encontrado."}
                       </div>
                     )}
-                  </div>
+                  </div >
                 ) : (
                   /* DEFAULT MODE (History + Extras) */
                   <>
@@ -454,23 +452,24 @@ export default function FilterBar() {
                       </div>
                     </div>
                   </>
-                )}
-              </div>
+                )
+                }
+              </div >
             )}
-          </div>
+          </div >
 
           {/* Filters (Scrollable) */}
-          <div className="flex-1 flex items-center gap-2 overflow-hidden relative">
+          < div className="flex-1 flex items-center gap-2 overflow-hidden relative" >
 
             {/* Scroll Arrow Left (Desktop Only) */}
-            <div className="hidden lg:flex absolute left-0 h-full items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10">
+            < div className="hidden lg:flex absolute left-0 h-full items-center bg-gradient-to-r from-white via-white to-transparent pr-20 z-10" >
               <button
                 onClick={scrollLeft}
                 className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors pointer-events-auto"
               >
                 <ChevronLeft className="h-5 w-5 text-gray-600" />
               </button>
-            </div>
+            </div >
 
             <div
               ref={scrollRef}
@@ -720,159 +719,161 @@ export default function FilterBar() {
                       </div>
                     </div>
                   </div>
-                </PopoverContent>
-              </Popover>
+                </PopoverContent >
+              </Popover >
 
               {/* Rent Specific Filters */}
-              {filters.operationType === 'rent' && (
-                <>
-                  {/* Furnished */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="inline-block">
-                        <FilterPill
-                          label="Mobiliado"
-                          active={filters.furnished !== "any"}
-                        />
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
-                      <div className="space-y-4">
-                        <h4 className="text-base font-bold text-[#1f2022]">Mobiliado</h4>
-                        <div className="flex gap-3">
-                          {[
-                            { label: "Tanto faz", val: "any" },
-                            { label: "Sim", val: "yes" },
-                            { label: "Não", val: "no" }
-                          ].map((opt) => (
-                            <button
-                              key={opt.val}
-                              onClick={() => setFilter("furnished", opt.val)}
-                              className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.furnished === opt.val
-                                ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
-                                : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+              {
+                filters.operationType === 'rent' && (
+                  <>
+                    {/* Furnished */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="inline-block">
+                          <FilterPill
+                            label="Mobiliado"
+                            active={filters.furnished !== "any"}
+                          />
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Pets */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="inline-block">
-                        <FilterPill
-                          label="Aceita pets"
-                          active={filters.petFriendly !== "any"}
-                        />
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
-                      <div className="space-y-4">
-                        <h4 className="text-base font-bold text-[#1f2022]">Aceita pets</h4>
-                        <div className="flex gap-3">
-                          {[
-                            { label: "Tanto faz", val: "any" },
-                            { label: "Sim", val: "yes" },
-                            { label: "Não", val: "no" }
-                          ].map((opt) => (
-                            <button
-                              key={opt.val}
-                              onClick={() => setFilter("petFriendly", opt.val)}
-                              className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.petFriendly === opt.val
-                                ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
-                                : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
+                        <div className="space-y-4">
+                          <h4 className="text-base font-bold text-[#1f2022]">Mobiliado</h4>
+                          <div className="flex gap-3">
+                            {[
+                              { label: "Tanto faz", val: "any" },
+                              { label: "Sim", val: "yes" },
+                              { label: "Não", val: "no" }
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => setFilter("furnished", opt.val)}
+                                className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.furnished === opt.val
+                                  ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
+                                  : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
+                                  }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                      </PopoverContent>
+                    </Popover>
 
-                  {/* Subway */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="inline-block">
-                        <FilterPill
-                          label="Próximo ao metrô"
-                          active={filters.nearSubway !== "any"}
-                        />
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
-                      <div className="space-y-4">
-                        <h4 className="text-base font-bold text-[#1f2022]">Próximo ao metrô</h4>
-                        <div className="flex gap-3">
-                          {[
-                            { label: "Tanto faz", val: "any" },
-                            { label: "Sim", val: "yes" },
-                            { label: "Não", val: "no" }
-                          ].map((opt) => (
-                            <button
-                              key={opt.val}
-                              onClick={() => setFilter("nearSubway", opt.val)}
-                              className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.nearSubway === opt.val
-                                ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
-                                : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                    {/* Pets */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="inline-block">
+                          <FilterPill
+                            label="Aceita pets"
+                            active={filters.petFriendly !== "any"}
+                          />
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Availability */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="inline-block"><FilterPill label="Disponibilidade" /></div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
-                      <div className="space-y-4">
-                        <h4 className="text-base font-bold text-[#1f2022]">Disponibilidade</h4>
-                        <div className="flex gap-3">
-                          {["Tanto faz", "Imediata", "Em breve"].map((opt, i) => (
-                            <button
-                              key={opt}
-                              className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${i === 0
-                                ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
-                                : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
-                                }`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
+                        <div className="space-y-4">
+                          <h4 className="text-base font-bold text-[#1f2022]">Aceita pets</h4>
+                          <div className="flex gap-3">
+                            {[
+                              { label: "Tanto faz", val: "any" },
+                              { label: "Sim", val: "yes" },
+                              { label: "Não", val: "no" }
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => setFilter("petFriendly", opt.val)}
+                                className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.petFriendly === opt.val
+                                  ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
+                                  : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
+                                  }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </>
-              )}
+                      </PopoverContent>
+                    </Popover>
 
-            </div>
+                    {/* Subway */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="inline-block">
+                          <FilterPill
+                            label="Próximo ao metrô"
+                            active={filters.nearSubway !== "any"}
+                          />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[340px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
+                        <div className="space-y-4">
+                          <h4 className="text-base font-bold text-[#1f2022]">Próximo ao metrô</h4>
+                          <div className="flex gap-3">
+                            {[
+                              { label: "Tanto faz", val: "any" },
+                              { label: "Sim", val: "yes" },
+                              { label: "Não", val: "no" }
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => setFilter("nearSubway", opt.val)}
+                                className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${filters.nearSubway === opt.val
+                                  ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
+                                  : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
+                                  }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Availability */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="inline-block"><FilterPill label="Disponibilidade" /></div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-6 rounded-2xl shadow-2xl border-gray-100" align="start">
+                        <div className="space-y-4">
+                          <h4 className="text-base font-bold text-[#1f2022]">Disponibilidade</h4>
+                          <div className="flex gap-3">
+                            {["Tanto faz", "Imediata", "Em breve"].map((opt, i) => (
+                              <button
+                                key={opt}
+                                className={`px-6 h-12 rounded-full text-sm font-semibold transition-all border ${i === 0
+                                  ? "bg-[#eff2ff] text-[#3b44c6] border-[#eff2ff]"
+                                  : "bg-white text-[#1f2022] border-gray-200 hover:border-gray-300"
+                                  }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </>
+                )
+              }
+
+            </div >
 
             {/* Scroll Arrow (Desktop Only) */}
-            <div className="hidden lg:flex absolute right-0 h-full items-center bg-gradient-to-l from-white via-white to-transparent pl-20 pointer-events-none">
+            < div className="hidden lg:flex absolute right-0 h-full items-center bg-gradient-to-l from-white via-white to-transparent pl-20 pointer-events-none" >
               <button
                 onClick={scrollRight}
                 className="w-10 h-10 rounded-full bg-white shadow-lg border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors z-10 pointer-events-auto"
               >
                 <ChevronRight className="h-5 w-5 text-gray-600" />
               </button>
-            </div>
-          </div>
+            </div >
+          </div >
 
           {/* Right Actions (Desktop Only) */}
-          <div className="hidden lg:flex items-center gap-3 flex-shrink-0 pl-4 border-l border-gray-100">
+          < div className="hidden lg:flex items-center gap-3 flex-shrink-0 pl-4 border-l border-gray-100" >
             <FiltersSidebar>
               <Button variant="ghost" className="rounded-full h-[48px] gap-2 bg-[#f3f5f6] hover:bg-[#e5e7eb] text-[#1f2022] text-[13px] font-bold border-none px-6">
                 <SlidersHorizontal className="h-4 w-4" />
@@ -884,10 +885,10 @@ export default function FilterBar() {
               <Bell className="h-4 w-4" />
               Criar alerta de imóvel
             </Button>
-          </div>
+          </div >
 
-        </div>
-      </div>
+        </div >
+      </div >
     </>
   );
 }
