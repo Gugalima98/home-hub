@@ -36,6 +36,7 @@ const PropertyDetailPage = () => {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [galleryInitialView, setGalleryInitialView] = useState<"photos" | "map">("photos");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -159,6 +160,7 @@ const PropertyDetailPage = () => {
         property={property}
         isOpen={showAllPhotos}
         onClose={() => setShowAllPhotos(false)}
+        initialView={galleryInitialView}
       />
     );
   }
@@ -229,7 +231,10 @@ const PropertyDetailPage = () => {
               <Button
                 variant="secondary"
                 className="rounded-full bg-white shadow-sm hover:bg-gray-50 text-[#1f2022] font-bold h-10 px-5 gap-2 text-xs"
-                onClick={() => setShowAllPhotos(true)}
+                onClick={() => {
+                  setGalleryInitialView("photos");
+                  setShowAllPhotos(true);
+                }}
               >
                 <Camera className="h-4 w-4" />
                 {imageList.length} Fotos
@@ -237,6 +242,10 @@ const PropertyDetailPage = () => {
               <Button
                 variant="secondary"
                 className="rounded-full bg-white shadow-sm hover:bg-gray-50 text-[#1f2022] font-bold h-10 px-5 gap-2 text-xs"
+                onClick={() => {
+                  setGalleryInitialView("map");
+                  setShowAllPhotos(true);
+                }}
               >
                 <MapIcon className="h-4 w-4" />
                 Mapa
@@ -320,7 +329,10 @@ const PropertyDetailPage = () => {
               {/* Bottom Pills */}
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-20 w-max">
                 <button
-                  onClick={() => setShowAllPhotos(true)}
+                  onClick={() => {
+                    setGalleryInitialView("photos");
+                    setShowAllPhotos(true);
+                  }}
                   className="h-9 px-5 bg-white rounded-full flex items-center gap-2 text-xs font-bold text-[#1f2022] shadow-md hover:bg-gray-50 transition-colors"
                 >
                   <Camera className="h-4 w-4" />
@@ -330,7 +342,13 @@ const PropertyDetailPage = () => {
                   <Building className="h-4 w-4" />
                   Vídeo
                 </button>
-                <button className="h-9 px-5 bg-white rounded-full flex items-center gap-2 text-xs font-bold text-[#1f2022] shadow-md hover:bg-gray-50 transition-colors">
+                <button
+                  className="h-9 px-5 bg-white rounded-full flex items-center gap-2 text-xs font-bold text-[#1f2022] shadow-md hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setGalleryInitialView("map");
+                    setShowAllPhotos(true);
+                  }}
+                >
                   <MapPin className="h-4 w-4" />
                   Mapa
                 </button>
@@ -428,7 +446,13 @@ const PropertyDetailPage = () => {
             <div className="mt-0 bg-white pb-4">
 
               {/* Map Card (QuintoAndar Style - Exact Visual Match) */}
-              <div className="relative w-full h-[180px] bg-[#eef2f5] mb-6 shadow-sm border-b border-gray-100 overflow-hidden">
+              <div
+                className="relative w-full h-[180px] bg-[#eef2f5] mb-6 shadow-sm border-b border-gray-100 overflow-hidden cursor-pointer active:opacity-95 transition-opacity"
+                onClick={() => {
+                  setGalleryInitialView("map");
+                  setShowAllPhotos(true);
+                }}
+              >
                 {/* Reliable Map Background (Local SVG from QuintoAndar) */}
                 <div className="absolute inset-0">
                   <img

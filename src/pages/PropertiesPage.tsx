@@ -166,6 +166,7 @@ const PropertiesPage = () => {
       // Keep isInitialMount true until we stabilize
     } else {
       isInitialMount.current = false;
+      fetchProperties(0, true);
     }
 
   }, [routeOperation, locationSlug, urlFilters, searchParams]);
@@ -431,9 +432,9 @@ const PropertiesPage = () => {
       <FilterBar />
 
       <div className="flex-1 flex relative">
+        {/* List Container - Hidden on mobile if map is shown */}
         <div
-          className={`w-full lg:w-[60%] flex flex-col ${showMap ? "hidden lg:flex" : "flex"
-            }`}
+          className={`w-full lg:w-[60%] flex flex-col ${showMap ? "hidden lg:flex" : "flex"}`}
         >
           <div className="px-6 py-4 border-b bg-background flex items-center justify-between">
             <div>
@@ -598,9 +599,9 @@ const PropertiesPage = () => {
           </ScrollArea>
         </div>
 
+        {/* Map Container - Shown on mobile if toggled, always on desktop */}
         <div
-          className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${showMap ? "block" : "hidden lg:block"
-            }`}
+          className={`w-full lg:w-[40%] lg:sticky lg:top-[7.5rem] lg:h-[calc(100vh-7.5rem)] ${showMap ? "block h-[calc(100vh-140px)]" : "hidden lg:block"}`}
         >
           <MapComponent
             // @ts-ignore
@@ -609,12 +610,22 @@ const PropertiesPage = () => {
             onMarkerClick={handleMarkerClick}
             onSearchArea={handleAreaSearch}
             centerCoordinates={searchCoordinates}
+            isOpen={showMap}
           />
         </div>
 
         <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
           <Button
-            onClick={() => setShowMap(!showMap)}
+            onClick={() => {
+              if (showMap) {
+                // Closing map: Reset filtered properties to show all
+                setFilteredProperties(properties);
+                setShowMap(false);
+              } else {
+                // Opening map: Just toggle, MapComponent will handle bounds
+                setShowMap(true);
+              }
+            }}
             className="rounded-full shadow-xl px-6 py-6 bg-primary hover:bg-primary/90"
           >
             {showMap ? (

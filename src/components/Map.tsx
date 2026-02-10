@@ -70,14 +70,9 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
   // Dispara o filtro inicial ao carregar o mapa
   useEffect(() => {
     map.invalidateSize();
-    const bounds = map.getBounds();
-    onBoundsChange({
-      north: bounds.getNorth(),
-      south: bounds.getSouth(),
-      east: bounds.getEast(),
-      west: bounds.getWest(),
-    });
-  }, [map]); 
+    // Removed onBoundsChange here to avoid filtering properties based on default viewport
+    // The MapUpdater will handle fitting bounds to properties, and moveend will handle subsequent filtering
+  }, [map]);
 
   return null;
 }
@@ -86,7 +81,7 @@ function MapController({ onBoundsChange }: { onBoundsChange: (bounds: any) => vo
 function MapUpdater({ properties, centerCoordinates }: { properties: Property[], centerCoordinates?: [number, number] | null }) {
   const map = useMapEvents({});
   const lastCenterRef = useRef<string | null>(null);
-  
+
   useEffect(() => {
     // 1. Priority: Explicit Center Coordinates (from Search)
     if (centerCoordinates) {
@@ -112,7 +107,7 @@ function MapUpdater({ properties, centerCoordinates }: { properties: Property[],
 
       if (validCoords.length > 0) {
         const bounds = L.latLngBounds(validCoords);
-        map.fitBounds(bounds, { 
+        map.fitBounds(bounds, {
           padding: [80, 80],
           maxZoom: 15,
           animate: true,
@@ -121,7 +116,25 @@ function MapUpdater({ properties, centerCoordinates }: { properties: Property[],
       }
     }
   }, [properties, centerCoordinates, map]);
-  
+
+  return null;
+}
+
+// Componente para forçar redimensionamento quando a visibilidade muda
+function MapResizeController({ isOpen }: { isOpen?: boolean }) {
+  const map = useMapEvents({});
+
+  useEffect(() => {
+    // Só roda o invalidateSize se o mapa estiver visível
+    if (isOpen) {
+      // Pequeno delay para garantir que o DOM atualizou a visibilidade/tamanho
+      const timer = setTimeout(() => {
+        map.invalidateSize();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, map]);
+
   return null;
 }
 
@@ -131,32 +144,33 @@ interface MapComponentProps {
   onMarkerClick?: (id: string) => void;
   onSearchArea?: (bounds: { north: number; south: number; east: number; west: number }) => void;
   centerCoordinates?: [number, number] | null;
+  isOpen?: boolean; // New prop to trigger resize
 }
 
-export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick, onSearchArea, centerCoordinates }: MapComponentProps) {
+export default function MapComponent({ properties, hoveredPropertyId, onMarkerClick, onSearchArea, centerCoordinates, isOpen }: MapComponentProps) {
   const navigate = useNavigate();
 
   // Centro inicial (São Paulo)
   const defaultCenter: [number, number] = [-23.55052, -46.633308];
-  
+
   // Safe initial center
   let initialCenter = centerCoordinates || defaultCenter;
   if (!centerCoordinates && properties.length > 0) {
-     // @ts-ignore
-     if (properties[0].coordinates) initialCenter = properties[0].coordinates;
+    // @ts-ignore
+    if (properties[0].coordinates) initialCenter = properties[0].coordinates;
   }
 
   // Helper para pegar a primeira imagem disponível do objeto JSON
   const getFirstImage = (images: any) => {
     if (!images || Object.keys(images).length === 0) return "/placeholder.svg";
-    
+
     // Tenta pegar da Fachada primeiro
     if (images["Fachada"] && images["Fachada"].length > 0) return images["Fachada"][0];
-    
+
     // Senão pega a primeira de qualquer categoria
     const firstKey = Object.keys(images)[0];
     if (images[firstKey] && images[firstKey].length > 0) return images[firstKey][0];
-    
+
     return "/placeholder.svg";
   };
 
@@ -165,7 +179,7 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
       <MapContainer
         center={initialCenter}
         zoom={centerCoordinates ? 15 : 13} // Higher zoom for specific searches
-        minZoom={10} 
+        minZoom={10}
         maxZoom={18}
         scrollWheelZoom={true}
         className="h-full w-full"
@@ -175,9 +189,10 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
-        
+
         <MapUpdater properties={properties} centerCoordinates={centerCoordinates} />
-        
+        <MapResizeController isOpen={isOpen} />
+
         {onSearchArea && (
           <MapController onBoundsChange={onSearchArea} />
         )}
@@ -187,7 +202,7 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
           iconCreateFunction={createClusterCustomIcon}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={80} 
+          maxClusterRadius={80}
         >
           {properties.map((property) => {
             // @ts-ignore - coordinates injectadas na query da page
@@ -204,42 +219,42 @@ export default function MapComponent({ properties, hoveredPropertyId, onMarkerCl
                 icon={createCustomIcon(hoveredPropertyId === property.id)}
                 zIndexOffset={hoveredPropertyId === property.id ? 1000 : 0}
                 eventHandlers={{
-                    click: () => {
-                      onMarkerClick?.(property.id);
-                    }
+                  click: () => {
+                    onMarkerClick?.(property.id);
+                  }
                 }}
               >
                 <Popup className="custom-popup" closeButton={false} minWidth={280} maxWidth={280}>
-                   <div className="flex flex-col gap-2 p-1">
-                      <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-gray-100 mb-1">
-                        <img 
-                            src={imageSrc} 
-                            alt={property.title} 
-                            className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-2 left-2 bg-white px-2 py-1 rounded-md text-[10px] font-bold">
-                            {property.area} m²
-                        </div>
+                  <div className="flex flex-col gap-2 p-1">
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-gray-100 mb-1">
+                      <img
+                        src={imageSrc}
+                        alt={property.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-2 left-2 bg-white px-2 py-1 rounded-md text-[10px] font-bold">
+                        {property.area} m²
                       </div>
-                      <div>
-                          <p className="text-xs text-gray-500 mb-0.5 font-normal line-clamp-1">{property.address}, {property.neighborhood}</p>
-                          <h3 className="text-sm font-bold text-[#1f2022] mb-0.5">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalPrice)}
-                            <span className="text-xs font-normal text-gray-500 ml-1">/mês</span>
-                          </h3>
-                          <p className="text-[11px] text-gray-500 mb-2">
-                            {property.operation_type === 'rent' ? 'Aluguel' : 'Venda'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(property.price)} 
-                            {property.condo_fee > 0 && ` + Cond. ${property.condo_fee}`}
-                          </p>
-                          <Button 
-                            size="sm" 
-                            className="w-full h-8 text-xs bg-[#3b44c6] hover:bg-[#2a308c]"
-                            onClick={() => navigate(generatePropertyUrl(property))}
-                          >
-                            Ver detalhes <ChevronRight className="h-3 w-3 ml-1" />
-                          </Button>
-                      </div>
-                   </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5 font-normal line-clamp-1">{property.address}, {property.neighborhood}</p>
+                      <h3 className="text-sm font-bold text-[#1f2022] mb-0.5">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalPrice)}
+                        <span className="text-xs font-normal text-gray-500 ml-1">/mês</span>
+                      </h3>
+                      <p className="text-[11px] text-gray-500 mb-2">
+                        {property.operation_type === 'rent' ? 'Aluguel' : 'Venda'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(property.price)}
+                        {property.condo_fee > 0 && ` + Cond. ${property.condo_fee}`}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="w-full h-8 text-xs bg-[#3b44c6] hover:bg-[#2a308c]"
+                        onClick={() => navigate(generatePropertyUrl(property))}
+                      >
+                        Ver detalhes <ChevronRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
                 </Popup>
               </Marker>
             );

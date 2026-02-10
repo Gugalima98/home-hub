@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X, Map as MapIcon, Image as ImageIcon, Heart, Share2, ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Property } from "@/components/PropertyCard";
@@ -9,12 +9,19 @@ interface PropertyGalleryProps {
     property: Property;
     isOpen: boolean;
     onClose: () => void;
+    initialView?: "photos" | "map";
 }
 
-export function PropertyGallery({ property, isOpen, onClose }: PropertyGalleryProps) {
-    const [viewMode, setViewMode] = useState<"photos" | "map">("photos");
+export function PropertyGallery({ property, isOpen, onClose, initialView = "photos" }: PropertyGalleryProps) {
+    const [viewMode, setViewMode] = useState<"photos" | "map">(initialView);
     const [activeCategory, setActiveCategory] = useState<string>("Sala");
     const [isFavorite, setIsFavorite] = useState(property.is_favorite);
+
+    useEffect(() => {
+        if (isOpen) {
+            setViewMode(initialView);
+        }
+    }, [isOpen, initialView]);
 
     if (!isOpen) return null;
 
@@ -185,9 +192,9 @@ export function PropertyGallery({ property, isOpen, onClose }: PropertyGalleryPr
                                 const isFirstCategory = activeCategory === "Sala" || activeCategory === availableCategories[0]?.name;
 
                                 return (
-                                    <>
+                                    <div key={idx} className="contents">
                                         {/* Standard Image Card */}
-                                        <div key={idx} className="relative group rounded-md overflow-hidden cursor-pointer bg-gray-100 aspect-[4/3] shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="relative group rounded-md overflow-hidden cursor-pointer bg-gray-100 aspect-[4/3] shadow-sm hover:shadow-md transition-shadow">
                                             <img
                                                 src={img}
                                                 alt={`${activeCategory} ${idx + 1}`}
@@ -231,7 +238,7 @@ export function PropertyGallery({ property, isOpen, onClose }: PropertyGalleryPr
                                                 </div>
                                             </div>
                                         )}
-                                    </>
+                                    </div>
                                 );
                             })}
                         </div>
